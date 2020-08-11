@@ -1,0 +1,16 @@
+{
+    "manifest_version": 2,
+    "name": "jv-com-chrome-extension",
+    "version": "0.0.1",
+    "description": "Extension pour suivre les topics du forum plus facilement.",
+    "author": "Rémy Lavergne",
+    "icons": {
+        "16": "images/forum16.png",
+        "32": "images/forum32.png",
+        "128": "images/forum128.png"
+    },
+    "browser_action": {
+        "default_icon": "images/forum16.png",
+        "default_popup": "popup.html"
+    }
+}
