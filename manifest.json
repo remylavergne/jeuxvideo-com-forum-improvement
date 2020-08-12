@@ -16,6 +16,18 @@
     "options_page": "games-list.html",
     "permissions": [
         "storage",
-        "tabs"
+        "tabs",
+        "activeTab"
+    ],
+    "background": {
+        "scripts":  ["eventPage.js"],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "matches": ["https://www.jeuxvideo.com/forums/*"],
+            "js": ["content.js"],
+            "css": ["css/content.css"]
+        }
     ]
 }
