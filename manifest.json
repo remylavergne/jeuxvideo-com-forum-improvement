@@ -17,16 +17,16 @@
     "permissions": [
         "storage",
         "tabs",
-        "activeTab"
+        "storage"
     ],
     "background": {
-        "scripts":  ["eventPage.js"],
+        "scripts":  ["background.js"],
         "persistent": false
     },
     "content_scripts": [
         {
             "matches": ["https://www.jeuxvideo.com/forums/*"],
-            "js": ["content.js"],
+            "js": ["content/content.js", "content/logs.js"],
             "css": ["css/content.css"]
         }
     ]

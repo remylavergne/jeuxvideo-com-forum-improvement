@@ -1,9 +1,17 @@
 let title = document.querySelector('#hello');
+let followBtn = document.getElementById('follow');
 
-document.querySelector('#clickMe').addEventListener('click', function(event) {
+followBtn.addEventListener('click', function(event) {
     console.log('test');
     // title.textContent = 'Salut';
     getCurrentTab();
+});
+
+chrome.tabs.query({
+    "active": true,
+    "currentWindow": true
+}, (tabs) => {
+    console.log(tabs[0]);
 });
 
  function getCurrentTab() {
