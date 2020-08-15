@@ -7,7 +7,6 @@ chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.currentTab) {
-        // Sauvegarde de la tab courante
         tab = request.currentTab;
         init(request.currentTab);
     }
@@ -16,19 +15,27 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 function init(tab) {
     console.log('=> Vérification de la page débuté');
 
-    if (getForumInformations(tab.url).isTopForum) {
-        checkBackupData(tab, (data) => {
-            console.log('Data reçues dans le callback', data);
-        });
+    forumInfos = getForumInformations(tab.url);
+
+    if (forumInfos.isTopForum) {
+        let backupData = checkBackupData();
+        console.log(`Backup data for forum id ${forumInfos.id}`, backupData);
+        if (backupData) {
+            // TODO : Comparer avec les anciennes données.
+        } else {
+            // Sauvegarder les données
+            extractTopics();
+            // backupTopicData();
+        }
     } else {
         console.log('Its not a top forum topic');
     }
 }
 
 // Check if URL is a global game forum
-function getForumInformations(url) {
+function getForumInformations(forumUrl) {
     let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
-    let matchs = url.match(regex);
+    let matchs = forumUrl.match(regex);
 
     const forumId = matchs[0].split("-")[1];
 
@@ -39,35 +46,35 @@ function getForumInformations(url) {
     return { id: forumId, isTopForum: false };
 }
 
-function checkBackupData(tab, callback) {
-    chrome.storage.local.get(['key'], function (result) {
-
+function checkBackupData(forumId) {
+    chrome.storage.local.get(forumId, function (result) {
+        return result;
     });
 }
 
+function extractTopics() {
+    const htmlCollection = document.getElementsByClassName('topic-list');
+    const topicsElements = htmlCollection[0].getElementsByTagName('li');
 
-/**
- * Enregistre la liste de tous les topics du forum actuel (ex: Halo Infinite)
- */
-function saveTopics() {
+    var topics = [];
+    for (var i = 1; i < topicsElements.length; i++) {
+        topics.push(Topic.fromHTMLElement(topicsElements[i]));
+    }
 
+    console.log('Nombre de topics créés', topics.length);
+    return topics;
 }
 
-function reloadTab() {
-    console.log('Tab reload !');
-    chrome.runtime.sendMessage({ reloadPage: true });
+function backupTopicData() {
+    chrome.storage.local.set(data, () => {
+        console.log('Data saved', data);
+    })
 }
 
-
-
-/**
- * Check if the forum is followed or not.
- * This condition determine the follow button behaviour.
- */
-function checkFollowStatus() {
-    // TODO: Return boolean
-    chrome.storage
-}
+// function reloadTab() {
+//     console.log('Tab reload !');
+//     chrome.runtime.sendMessage({ reloadPage: true });
+// }
 
 /**
  * Add a new button to follow forum updates
@@ -89,24 +96,6 @@ function addListenerToFollowButton() {
     });
 }
 
-function extractCurrentData() {
-
-}
-
-function saveFollowedForum() {
-
-}
-
-function setToLocalStorage(data) {
-    chrome.storage.local.set(data, () => {
-        console.log('Data saved', data);
-    })
-}
-
-function getForumKey(tab) {
-
-}
-
 /**
  * 
  * @param {*} key string[]
@@ -117,14 +106,18 @@ function getFromLocalStorage(key) {
     });
 }
 
-/**
- * Check last informations saved into storage and compare with actual content to adapt view.
- * E.g: Updated link to blue color => like normal behaviour
- */
-function checkNewContent() {
+class Topic {
 
+    subject = '';
+    count = 0;
+    date = '';
+
+    constructor() {}
+
+    static fromHTMLElement(element) {
+        console.log('Topic element reçu', element);
+        return new Topic()
+    }
 }
-
-// init();
 
 
