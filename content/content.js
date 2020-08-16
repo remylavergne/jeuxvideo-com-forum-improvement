@@ -1,6 +1,7 @@
 console.log('Content script loaded at', new Date().getSeconds());
 let tab;
 let forumInfos = { id: '', isTopForum: false };
+let lastTopics = [];
 
 // Script qui se lance à tout les lancements de page.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
@@ -23,9 +24,11 @@ function init(tab) {
         if (backupData) {
             // TODO : Comparer avec les anciennes données.
         } else {
-            // Sauvegarder les données
-            extractTopics();
-            // backupTopicData();
+            const lastTopics = extractTopics();
+            backupTopicData(forumInfos.id, lastTopics);
+
+            // Debug
+            getFromLocalStorage(forumInfos.id);
         }
     } else {
         console.log('Its not a top forum topic');
@@ -58,16 +61,16 @@ function extractTopics() {
 
     var topics = [];
     for (var i = 1; i < topicsElements.length; i++) {
-        topics.push(Topic.fromHTMLElement(topicsElements[i]));
+        topics.push(new Topic(topicsElements[i]));
     }
 
-    console.log('Nombre de topics créés', topics.length);
+    console.log('Nombre de topics créés', topics[0]);
     return topics;
 }
 
-function backupTopicData() {
-    chrome.storage.local.set(data, () => {
-        console.log('Data saved', data);
+function backupTopicData(forumId, currentTopics) {
+    chrome.storage.local.set({ [forumId]: currentTopics }, () => {
+        console.log('Data saved', currentTopics);
     })
 }
 
@@ -96,27 +99,29 @@ function addListenerToFollowButton() {
     });
 }
 
-/**
- * 
- * @param {*} key string[]
- */
 function getFromLocalStorage(key) {
     chrome.storage.local.get(key, function (result) {
-        console.log(result.valeur);
+        console.log(result);
     });
 }
 
 class Topic {
+    constructor(element) {
+        this.id = element.dataset.id;
+        this.url = ''; // TODO: Récupérer l'URL du topic dans le futur
+        this.subject = element.children[0].innerText;
+        this.author = element.children[1].innerText;
+        this.count = element.children[2].innerText;
+        this.date = element.children[3].innerText;
+    }
 
-    subject = '';
-    count = 0;
-    date = '';
+    haveBeenUpdated(topic) {
+        if (this.id !== topic.id) {
+            console.log('Error, not same topic id !');
+            return false;
+        }
 
-    constructor() {}
-
-    static fromHTMLElement(element) {
-        console.log('Topic element reçu', element);
-        return new Topic()
+        return this.count !== topic.count;
     }
 }
 
