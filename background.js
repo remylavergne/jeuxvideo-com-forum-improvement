@@ -1,4 +1,4 @@
-console.log('Background script loaded at', new Date().getSeconds());
+console.log('Background script loaded at', Date.now());
 // Récupère les messages émis
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "requestCurrentTab") {

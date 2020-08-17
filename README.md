@@ -1,3 +1,12 @@
+## Roadmap
+
+- MVP: Refresh
+- Re-order topic list
+- Re-write link to open newest topic
+- Background refresh check
+
+
+
 ## Sources
 
 - <http://youmightnotneedjquery.com/>
