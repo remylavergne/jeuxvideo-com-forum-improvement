@@ -69,7 +69,12 @@ function extractTopics() {
 }
 
 function backupTopicData(forumId, currentTopics) {
-    chrome.storage.local.set({ [forumId]: currentTopics }, () => {
+    chrome.storage.local.set({
+        [forumId]: {
+            createdTime: Date.now(),
+            topics: currentTopics
+        }
+    }, () => {
         console.log('Data saved', currentTopics);
     })
 }
