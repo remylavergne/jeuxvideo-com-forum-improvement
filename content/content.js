@@ -30,11 +30,11 @@ async function init(tab) {
             console.log('SnapshotChanges', snapshotChanges);
             // Update views
             // const updatedTopics = newElement(unreadTopics);
-            let elementsWatched = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
+            let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
             // Update data in local storage with current
-            watchUnreadTopics(elementsWatched); // TODO => Not working....
             updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
-
+            // Ecouter les événements sur les topics pour mettre à jour les données
+            watchUnreadTopics(htmlElementsToListen); // TODO => Not working....
             // const snapshotTest = await getLastSnapshot(forumInfos.id);
 
             // console.log('snapshot test', snapshotTest);
@@ -188,6 +188,8 @@ function forumSnapshot(forumId, currentTopics) {
  */
 function injectUpdatedElement(topicElements, updatedTopics) {
 
+    console.log('==> updatedTopics', updatedTopics);
+
     let elements = [];
     for (topic of updatedTopics) {
         for (el of topicElements) {
@@ -207,18 +209,26 @@ function watchUnreadTopics(elements) {
     // Debug
     console.log('Unread topics to watch', elements);
 
-    for (el of elements) {
-        el.addEventListener('click', function () {
-            el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
-        });
+    for (i = 0; i < elements.length; i++) {
+
+        (function (index) {
+            elements[index].addEventListener('click', function () {
+                elements[index].getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
+            }, false);
+        })(i)
     }
+}
+
+function addListener(el) {
+    console.log('element clicked', el);
+    el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
 }
 
 /**
  * Permet de mettre à jour le snapshot.
- * @param {*} forumId
- * @param {*} snapshot 
- * @param {*} snapshotChanges 
+ * @param {String} forumId - Id du forum -> URL
+ * @param {*} snapshot -> Les données du forum de la visite précédente
+ * @param {SnapshotChanges} snapshotChanges - Les changements à répercuter sur le snapshot actuel
  */
 async function updateSnapshot(forumId, snapshot, snapshotChanges) {
     console.log('snapshot', snapshot);
@@ -243,15 +253,15 @@ async function updateSnapshot(forumId, snapshot, snapshotChanges) {
     }
 
     await forumSnapshot(forumId, snapshot[forumId].topics);
-    
+
     return snapshot;
 }
 
-function updateData(element) {
-    // Update de la couleur du lien au cas où l'utilisateur l'ouvre dans un nouvel onglet
-    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
-    console.log('Le lien sera update dans le local storage');
-}
+// function updateData(element) {
+//     // Update de la couleur du lien au cas où l'utilisateur l'ouvre dans un nouvel onglet
+//     element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
+//     console.log('Le lien sera update dans le local storage');
+// }
 
 // function reloadTab() {
 //     console.log('Tab reload !');
@@ -296,18 +306,18 @@ class Topic {
         this.readPending = false;
     }
 
-    haveBeenUpdated(topic) {
-        if (this.id !== topic.id) {
-            // console.log('Error, not same topic id !');
-            return false;
-        }
+    // haveBeenUpdated(topic) {
+    //     if (this.id !== topic.id) {
+    //         // console.log('Error, not same topic id !');
+    //         return false;
+    //     }
 
-        return this.count !== topic.count;
-    }
+    //     return this.count !== topic.count;
+    // }
 
-    unreadState() {
-        this.innerHTML = this.innerHTML.replace('lien-jv', 'lien-jv lien-jv-unread');
-    }
+    // unreadState() {
+    //     this.innerHTML = this.innerHTML.replace('lien-jv', 'lien-jv lien-jv-unread');
+    // }
 
     /**
      * Méthode pour dire qu'un topic n'a pas été lu
