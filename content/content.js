@@ -26,7 +26,6 @@ async function init(tab) {
             // console.log('Second time', snapshot);
             const previousTopics = snapshot[forumInfos.id].topics;
             const snapshotChanges = searchChanges(previousTopics, currentTopics.topics);
-            console.log('SnapshotChanges', snapshotChanges);
             // Update views
             // const updatedTopics = newElement(unreadTopics);
             let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
@@ -155,7 +154,7 @@ function forumSnapshot(forumId, currentTopics) {
             topics: currentTopics
         }
     }, () => {
-        console.log('Data saved', currentTopics);
+        // console.log('Data saved', currentTopics);
     })
 }
 
