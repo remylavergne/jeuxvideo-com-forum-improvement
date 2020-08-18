@@ -83,10 +83,11 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
 
     // Search updated topics since last visit
     for (topic of currentTopics) {
+
         let topicFound = previousTopics.find(t => t.id === topic.id);
 
         if (topicFound) {
-            const isDiff = topicFound.count !== topic.count;
+            const isDiff = (topicFound.count !== topic.count) || topicFound.isReadPending;
 
             if (isDiff) {
                 updatedTopics.push(topic);
@@ -112,6 +113,7 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
     let newTopics = [];
     for (id of newTopicsId) {
         let newTopic = currentTopics.find(t => t.id === id);
+        newTopic.isReadPending();
         newTopics.push(newTopic);
         // Global update
         updatedTopics.push(newTopic);
@@ -128,6 +130,10 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
     return new SnapshotChanges(updatedTopics, newTopics, missingTopics);
 }
 
+/**
+ * Extraction des topics sous forme d'élément HTML, et création de leur correspondance en objet `Topic` 
+ * @returns { topics: Topic[], elements: HTMLCollection }
+ */
 function extractTopicsFromHTML() {
     const htmlCollection = document.getElementsByClassName('topic-list');
     const topicsElements = htmlCollection[0].getElementsByTagName('li');
@@ -140,6 +146,11 @@ function extractTopicsFromHTML() {
     return { topics: topics, elements: topicsElements };
 }
 
+/**
+ * Permet de sauvegarder les topics d'un forum
+ * @param {String} forumId - L'id du forum. Fourni dans l'URL
+ * @param {Topic[]} currentTopics - Liste des topics en objet custom
+ */
 function forumSnapshot(forumId, currentTopics) {
     chrome.storage.local.set({
         [forumId]: {
@@ -151,24 +162,30 @@ function forumSnapshot(forumId, currentTopics) {
     })
 }
 
-function removeSnapshot(forumId) {
-    chrome.storage.local.remove(forumId, () => {
-        // console.log('Data saved', currentTopics);
-    })
-}
+// function removeSnapshot(forumId) {
+//     chrome.storage.local.remove(forumId, () => {
+//         // console.log('Data saved', currentTopics);
+//     })
+// }
 
-function newElement(topics) { // Pas obligatoire car on ne se sert plus de la classe lien-jv-unread
+// function newElement(topics) { // Pas obligatoire car on ne se sert plus de la classe lien-jv-unread
 
-    let unreadTopics = [];
-    for (topic of topics) {
-        topic.unreadState();
-        unreadTopics.push(topic);
-    }
+//     let unreadTopics = [];
+//     for (topic of topics) {
+//         topic.unreadState();
+//         unreadTopics.push(topic);
+//     }
 
-    // console.log('topics modifiés', unreadTopics);
-    return unreadTopics;
-}
+//     // console.log('topics modifiés', unreadTopics);
+//     return unreadTopics;
+// }
 
+/**
+ * Update visuellement les topics qui ont été mis à jour par rapport à la dernière visite
+ * Les liens deviennnent bleus pour indiquer le nouveau contenu non lu
+ * @param {HTMLCollection} topicElements - Les éléments des topics de la page courante
+ * @param {Topic[]} updatedTopics - Les topics qui ont du nouveau contenu, et qu'il faut mettre en surbrillance
+ */
 function injectUpdatedElement(topicElements, updatedTopics) {
 
     let elements = [];
@@ -292,6 +309,11 @@ class Topic {
         this.innerHTML = this.innerHTML.replace('lien-jv', 'lien-jv lien-jv-unread');
     }
 
+    /**
+     * Méthode pour dire qu'un topic n'a pas été lu
+     * Use case => Lorsqu'un nouveau topic est ajouté, ou remonté, il n'a pas de valeur antérieure dans le snapshot,
+     * le programme considère donc qu'il n'y a pas eu d'update sur ce topic, et ne l'affiche pas en bleu
+     */
     isReadPending() {
         this.readPending = true;
     }
