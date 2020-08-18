@@ -8,7 +8,7 @@ chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.currentTab) {
-        tab = request.currentTab;
+        // tab = request.currentTab;
         init(request.currentTab);
     }
 });
@@ -17,24 +17,35 @@ async function init(tab) {
     forumInfos = getForumInformations(tab.url);
 
     if (forumInfos.isTopForum) {
-        const currentTopics = extractTopics();
-        const previousTopicsInfos = await checkBackupData(forumInfos.id);
-        
-        if (previousTopicsInfos) {
-            const previousTopics = previousTopicsInfos[forumInfos.id].topics;
-            const unreadTopics = searchUpdate(previousTopics, currentTopics.topics);
-            // Update views
-            const updatedTopics = newElement(unreadTopics);
-            injectUpdatedElement(currentTopics.elements, updatedTopics);
-            // Update data in local storage with current
-            // removeTopicData(forumInfos.id);
-            // backupTopicData(forumInfos.id, currentTopics.topics);
+        const currentTopics = extractTopicsFromHTML();
+        const snapshot = await getLastSnapshot(forumInfos.id);
+
+        if (isFirstTime(snapshot)) {
+            // console.log('First time', snapshot);
+            forumSnapshot(forumInfos.id, currentTopics.topics);
         } else {
-            backupTopicData(forumInfos.id, currentTopics.topics);
+            // console.log('Second time', snapshot);
+            const previousTopics = snapshot[forumInfos.id].topics;
+            const snapshotChanges = searchChanges(previousTopics, currentTopics.topics);
+            console.log('SnapshotChanges', snapshotChanges);
+            // Update views
+            // const updatedTopics = newElement(unreadTopics);
+            let elementsWatched = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
+            // Update data in local storage with current
+            watchUnreadTopics(elementsWatched); // TODO => Not working....
+            updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
+
+            // const snapshotTest = await getLastSnapshot(forumInfos.id);
+
+            // console.log('snapshot test', snapshotTest);
         }
     } else {
         console.log('Its not a top forum topic');
     }
+}
+
+function isFirstTime(snapshot) {
+    return snapshot ? false : true;
 }
 
 // Check if URL is a global game forum
@@ -44,15 +55,15 @@ function getForumInformations(forumUrl) {
 
     if (matchs && matchs.length > 0) {
         const forumId = matchs[0].split("-")[1];
-        
+
         return { id: forumId, isTopForum: true };
     } else {
         return { id: 0, isTopForum: false };
     }
 }
 
-async function checkBackupData(forumId) {
-    return new Promise(function(resolve, reject) {
+async function getLastSnapshot(forumId) {
+    return new Promise(function (resolve, reject) {
         chrome.storage.local.get(forumId, function (result) {
             resolve(result);
         });
@@ -62,23 +73,62 @@ async function checkBackupData(forumId) {
 /**
  * Cherche les topics qui ont été mis à jour.
  */
-function searchUpdate(previousTopics, currentTopics) {
+function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cette méthode :D
+
+    // Debug
+    // console.log('previousTopics', previousTopics);
+    // console.log('currentTopics', currentTopics);
 
     let updatedTopics = [];
 
+    // Search updated topics since last visit
     for (topic of currentTopics) {
-        const isDiff = previousTopics.find(t => t.id === topic.id).count !== topic.count;
+        let topicFound = previousTopics.find(t => t.id === topic.id);
 
-        if (isDiff) {
-            updatedTopics.push(topic);
+        if (topicFound) {
+            const isDiff = topicFound.count !== topic.count;
+
+            if (isDiff) {
+                updatedTopics.push(topic);
+            }
         }
     }
 
-    // console.log('Topics différents', updatedTopics);
-    return updatedTopics;
+    // Trouver des nouveaux topics, ou des vieux topics qui remontent
+
+    let previousTopicsId = previousTopics.map(topic => topic.id);
+    let currentTopicsId = currentTopics.map(topic => topic.id);
+
+    // DEBUG
+    // console.log('previousTopicsId', previousTopicsId);
+    // console.log('currentTopicsId', currentTopicsId);
+
+    let newTopicsId = currentTopicsId.filter(x => !previousTopicsId.includes(x));
+    let missingTopicsId = previousTopicsId.filter(x => !currentTopicsId.includes(x));
+
+    console.log('newTopicsId', newTopicsId);
+    console.log('missingTopicsId', missingTopicsId);
+    // Nouveaux topics
+    let newTopics = [];
+    for (id of newTopicsId) {
+        let newTopic = currentTopics.find(t => t.id === id);
+        newTopics.push(newTopic);
+        // Global update
+        updatedTopics.push(newTopic);
+    }
+
+    // Topics sortis
+    let missingTopics = [];
+    for (id of missingTopicsId) {
+        let missingTopic = previousTopics.find(t => t.id === id);
+        missingTopics.push(missingTopic);
+    }
+    // TODO => Si nouveaux / missing topics => update du Snapshot
+
+    return new SnapshotChanges(updatedTopics, newTopics, missingTopics);
 }
 
-function extractTopics() {
+function extractTopicsFromHTML() {
     const htmlCollection = document.getElementsByClassName('topic-list');
     const topicsElements = htmlCollection[0].getElementsByTagName('li');
 
@@ -90,7 +140,7 @@ function extractTopics() {
     return { topics: topics, elements: topicsElements };
 }
 
-function backupTopicData(forumId, currentTopics) {
+function forumSnapshot(forumId, currentTopics) {
     chrome.storage.local.set({
         [forumId]: {
             createdTime: Date.now(),
@@ -101,13 +151,13 @@ function backupTopicData(forumId, currentTopics) {
     })
 }
 
-function removeTopicData(forumId) {
+function removeSnapshot(forumId) {
     chrome.storage.local.remove(forumId, () => {
         // console.log('Data saved', currentTopics);
     })
 }
 
-function newElement(topics) {
+function newElement(topics) { // Pas obligatoire car on ne se sert plus de la classe lien-jv-unread
 
     let unreadTopics = [];
     for (topic of topics) {
@@ -121,15 +171,69 @@ function newElement(topics) {
 
 function injectUpdatedElement(topicElements, updatedTopics) {
 
-    // console.log('topicElements', topicElements);
+    let elements = [];
     for (topic of updatedTopics) {
         for (el of topicElements) {
             if (el.dataset.id === topic.id) {
                 el.innerHTML = topic.innerHTML;
                 el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
+                // Save element reference to watch it
+                elements.push(el);
             }
         }
     }
+
+    return elements;
+}
+
+function watchUnreadTopics(elements) {
+    // Debug
+    console.log('Unread topics to watch', elements);
+
+    for (el of elements) {
+        el.addEventListener('click', function () {
+            el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
+        });
+    }
+}
+
+/**
+ * Permet de mettre à jour le snapshot.
+ * @param {*} forumId
+ * @param {*} snapshot 
+ * @param {*} snapshotChanges 
+ */
+async function updateSnapshot(forumId, snapshot, snapshotChanges) {
+    console.log('snapshot', snapshot);
+    console.log('snapshotChanges', snapshotChanges);
+
+    // Remove deleted topics
+    if (snapshotChanges.deleted.length > 0) {
+        for (topic of snapshotChanges.deleted) {
+            let index = snapshot[forumId].topics.findIndex(t => t.id === topic.id);
+            console.log('index', index);
+            snapshot[forumId].topics.splice(index, index >= 0 ? 1 : 0);
+            console.log('snapshot edité -- =>', snapshot[forumId].topics);
+        }
+    }
+
+    // Add added topics
+    if (snapshotChanges.added.length > 0) {
+        for (topic of snapshotChanges.added) {
+            snapshot[forumId].topics.push(topic);
+            console.log('snapshot edité ++ =>', snapshot[forumId].topics);
+        }
+    }
+
+    await forumSnapshot(forumId, snapshot[forumId].topics);
+    
+    return snapshot;
+}
+
+function updateData(element) {
+    // Update de la couleur du lien au cas où l'utilisateur l'ouvre dans un nouvel onglet
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = 'pink';
+    console.log('Le lien sera update dans le local storage');
 }
 
 // function reloadTab() {
@@ -172,6 +276,7 @@ class Topic {
         this.count = element.children[2].innerText;
         this.date = element.children[3].innerText;
         this.innerHTML = element.innerHTML.trim();
+        this.readPending = false;
     }
 
     haveBeenUpdated(topic) {
@@ -185,5 +290,17 @@ class Topic {
 
     unreadState() {
         this.innerHTML = this.innerHTML.replace('lien-jv', 'lien-jv lien-jv-unread');
+    }
+
+    isReadPending() {
+        this.readPending = true;
+    }
+}
+
+class SnapshotChanges {
+    constructor(updated, added, deleted) {
+        this.updated = updated;
+        this.added = added;
+        this.deleted = deleted;
     }
 }
