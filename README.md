@@ -1,8 +1,10 @@
-# JeuxVideo.com forum amélioration
+# 🎮 JeuxVideo.com forum amélioration
 
 Cette extension Chrome permet de mettre en évidence les topics qui ont été mis à jour pendant votre absence, pour une meilleure visibilité 🤓
 
 C'est la première version de l'extension. Celle-ci, si utilisée, évoluera en fonctionnalités.
+
+![](./resources/jv-forum-refresh-example.gif)
 
 ## Installation
 
