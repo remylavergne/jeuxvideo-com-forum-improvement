@@ -13,10 +13,13 @@ Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous 
 - Télécharger la [dernière version disponible](https://github.com/remylavergne/jeuxvideo-com-forum-improvement/releases)
 - Et suivre ce tutoriel pour [installer une extension Chrome](https://developer.chrome.com/extensions/getstarted)
 
-## Roadmap
+## Roadmap / idées
 
 - MVP: Refresh
 - Background refresh check
+- Désactivation de la prévisualisation des messages
+- Dark Mode ?
+- Redirection vers le message le plus récent d'un topic
 
 ## Sources
 
