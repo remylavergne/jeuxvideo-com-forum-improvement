@@ -1,5 +1,6 @@
-console.log('Content script loaded at', Date.now());
+console('Content script loaded at', Date.now());
 
+const debug = false;
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
 
@@ -19,29 +20,21 @@ async function init(tab) {
         const currentTopics = extractTopicsFromHTML();
         const snapshot = await getLastSnapshot(forumInfos.id);
 
-        if (isFirstTime(snapshot)) {
-            // console.log('First time', snapshot);
+        if (!snapshot[forumInfos.id]) {
             forumSnapshot(forumInfos.id, currentTopics.topics);
         } else {
-            // console.log('Second time', snapshot);
             const previousTopics = snapshot[forumInfos.id].topics;
             const snapshotChanges = searchChanges(previousTopics, currentTopics.topics);
             // Update views
-            // const updatedTopics = newElement(unreadTopics);
             let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
             // Update data in local storage with current
             updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
             // Ecouter les événements sur les topics pour mettre à jour les données
-            watchUnreadTopics(forumInfos.id, htmlElementsToListen); // TODO => Not working....
-            // const snapshotTest = await getLastSnapshot(forumInfos.id);
+            watchUnreadTopics(forumInfos.id, htmlElementsToListen);
         }
     } else {
-        console.log('Its not a top forum topic');
+        console('Its not a top forum topic');
     }
-}
-
-function isFirstTime(snapshot) {
-    return snapshot ? false : true;
 }
 
 // Check if URL is a global game forum
@@ -70,10 +63,6 @@ async function getLastSnapshot(forumId) {
  * Cherche les topics qui ont été mis à jour.
  */
 function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cette méthode :D
-
-    // Debug
-    // console.log('previousTopics', previousTopics);
-    // console.log('currentTopics', currentTopics);
 
     let updatedTopics = [];
 
@@ -121,7 +110,6 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
         let missingTopic = previousTopics.find(t => t.id === id);
         missingTopics.push(missingTopic);
     }
-    // TODO => Si nouveaux / missing topics => update du Snapshot
 
     return new SnapshotChanges(updatedTopics, newTopics, missingTopics);
 }
@@ -154,7 +142,7 @@ function forumSnapshot(forumId, currentTopics) {
             topics: currentTopics
         }
     }, () => {
-        // console.log('Data saved', currentTopics);
+        console('Data saved', currentTopics);
     })
 }
 
@@ -165,8 +153,6 @@ function forumSnapshot(forumId, currentTopics) {
  * @param {Topic[]} updatedTopics - Les topics qui ont du nouveau contenu, et qu'il faut mettre en surbrillance
  */
 function injectUpdatedElement(topicElements, updatedTopics) {
-
-    // console.log('==> updatedTopics', updatedTopics);
 
     let elements = [];
     for (topic of updatedTopics) {
@@ -184,8 +170,6 @@ function injectUpdatedElement(topicElements, updatedTopics) {
 }
 
 async function watchUnreadTopics(forumId, elements) {
-    // Debug
-    // console.log('Unread topics to watch', elements);
 
     for (i = 0; i < elements.length; i++) {
         // TODO => Refactor
@@ -213,9 +197,6 @@ async function watchUnreadTopics(forumId, elements) {
  * @param {SnapshotChanges} snapshotChanges - Les changements à répercuter sur le snapshot actuel
  */
 async function updateSnapshot(forumId, snapshot, snapshotChanges) {
-    // DEBUG
-    // console.log('snapshot', snapshot);
-    // console.log('snapshotChanges', snapshotChanges);
 
     // Remove deleted topics
     if (snapshotChanges.deleted.length > 0) {
@@ -262,5 +243,16 @@ class SnapshotChanges {
         this.updated = updated;
         this.added = added;
         this.deleted = deleted;
+    }
+}
+
+/**
+ * Affichage des logs en debug
+ * @param {String} text 
+ * @param {any} data 
+ */
+function console(text, data) {
+    if (debug) {
+        console.log(text, data);
     }
 }
