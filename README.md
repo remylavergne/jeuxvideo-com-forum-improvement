@@ -20,6 +20,8 @@ Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous 
 - Désactivation de la prévisualisation des messages
 - Dark Mode ?
 - Redirection vers le message le plus récent d'un topic
+- Prendre en compte no propre post dans le compte
+- Agrandir la police de réponse au message 🤓
 
 ## Sources
 
