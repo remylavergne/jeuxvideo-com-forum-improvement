@@ -1,6 +1,5 @@
-console('Content script loaded at', Date.now());
-
-const debug = false;
+const debug = true;
+cnsl('Content script loaded at', Date.now());
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
 
@@ -33,7 +32,7 @@ async function init(tab) {
             watchUnreadTopics(forumInfos.id, htmlElementsToListen);
         }
     } else {
-        console('Its not a top forum topic');
+        cnsl('Its not a top forum topic');
     }
 }
 
@@ -142,7 +141,7 @@ function forumSnapshot(forumId, currentTopics) {
             topics: currentTopics
         }
     }, () => {
-        console('Data saved', currentTopics);
+        cnsl('Data saved', currentTopics);
     })
 }
 
@@ -251,7 +250,7 @@ class SnapshotChanges {
  * @param {String} text 
  * @param {any} data 
  */
-function console(text, data) {
+function cnsl(text, data) {
     if (debug) {
         console.log(text, data);
     }
