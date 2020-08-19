@@ -4,6 +4,8 @@ Cette extension Chrome permet de mettre en évidence les topics qui ont été mi
 
 C'est la première version de l'extension. Celle-ci, si utilisée, évoluera en fonctionnalités.
 
+![](./resources/jv-forum-refresh-example.gif)
+
 ## Installation
 
 Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous pouvez quand même l'installer.
