@@ -6,9 +6,11 @@ let lastTopics = [];
 // Script qui se lance à tout les lancements de page.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.currentTab) {
-        init(request.currentTab);
+        await init(request.currentTab);
+        // startLive();
+        addLiveButton();
     }
 });
 
@@ -123,7 +125,7 @@ function extractTopicsFromHTML() {
 
     var topics = [];
     for (var i = 1; i < topicsElements.length; i++) {
-        topics.push(new Topic(topicsElements[i]));
+        topics.push(Topic.fromHTML(topicsElements[i]));
     }
 
     return { topics: topics, elements: topicsElements };
@@ -180,7 +182,7 @@ async function watchUnreadTopics(forumId, elements) {
                 let snapshot = await getLastSnapshot(forumInfos.id);
                 let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
                 // Create new topic object with current topic element informations
-                let updatedTopic = new Topic(el);
+                let updatedTopic = Topic.fromHTML(el);
                 snapshot[forumId].topics[idx] = updatedTopic;
                 // Synchronize updated snapshot to local storage
                 forumSnapshot(forumId, snapshot[forumId].topics);
@@ -216,21 +218,64 @@ async function updateSnapshot(forumId, snapshot, snapshotChanges) {
 
     return snapshot;
 }
+/**
+ * Toutes les informations permettant de suivre un topic et ses évolutions
+ */
 class Topic {
-    constructor(element) {
-        this.id = element.dataset.id;
-        this.url = ''; // TODO: Récupérer l'URL du topic dans le futur
-        this.subject = element.children[0].innerText;
-        this.author = element.children[1].innerText;
-        this.count = element.children[2].innerText;
-        this.date = element.children[3].innerText;
-        this.innerHTML = element.innerHTML.trim();
+    constructor(id, url, subject, author, count, date, innerHTML, forumId) {
+        this.id = id;
+        this.url = url;
+        this.subject = subject;
+        this.author = author;
+        this.count = count;
+        this.date = date;
+        this.innerHTML = innerHTML;
         this.readPending = false;
+        this.forumId = forumId;
     }
 
-    isRead() {
-        this.readPending = false;
+    static fromHTML(element) {
+        let id = element.dataset.id;
+        let url = ''; // TODO: Récupérer l'URL du topic dans le futur
+        let subject = element.children[0].innerText;
+        let author = element.children[1].innerText;
+        let count = element.children[2].innerText;
+        let date = element.children[3].innerText;
+        let innerHTML = element.innerHTML.trim();
+        let forumId = ''; // Récupérer l'id du forum
+
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
     }
+
+    /**
+     * Extrait les informations depuis le flux RSS d'un forum spécifique
+     * @param {XMLDocument} item - Document XML représentant un objet Topic
+     */
+    static fromXML(item) {
+        const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
+        const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
+        const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
+        const authorRegex = new RegExp(/topic: (.+)/g);
+        const countRegex = new RegExp(/\((\d+) .+\)/g);
+        // Process informations
+        let globalInfos = item.getElementsByTagName('description')[0].childNodes[0].nodeValue.trim();
+        let fullURL = item.getElementsByTagName('link')[0].childNodes[0].nodeValue.trim();
+
+        let id = (fullURL.match(idRegex) || []).map(e => e.replace(idRegex, '$1'))[0].trim();
+        let url = fullURL;
+        let subject = (globalInfos.match(subjectRegex) || []).map(e => e.replace(subjectRegex, '$1'))[0].trim();
+        let author = (globalInfos.match(authorRegex) || []).map(e => e.replace(authorRegex, '$1'))[0].trim();
+        let count = (globalInfos.match(countRegex) || []).map(e => e.replace(countRegex, '$1'))[0].trim();
+        let date = '';
+        let innerHTML = '';
+        let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
+        
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
+    }
+
+    // isRead() {
+    //     this.readPending = false;
+    // }
 
     isReadPending() {
         this.readPending = true;
@@ -254,4 +299,71 @@ function cnsl(text, data) {
     if (debug) {
         console.log(text, data);
     }
+}
+
+
+// ---------------------------------
+// Live
+// ---------------------------------
+
+/**
+ * Ajoute un bouton Suivre à un forum pour avoir les mises à jour en background
+ */
+function addLiveButton() {
+    // Création du bouton follow
+    let followBtn = document.createElement('div');
+    followBtn.classList.add('follow-btn');
+    followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+
+    let target = document.getElementsByClassName('bloc-pre-pagi-forum')[0];
+    cnsl('followBtn', followBtn);
+    target.appendChild(followBtn);
+
+    // Handle button clicks
+    addLiveButtonListener(followBtn);
+
+    return followBtn;
+}
+
+/**
+ * Ajoute un Event Listener sur un élément HTML
+ * @param {HTMLElement} followBtn - HTMLElement
+ */
+function addLiveButtonListener(followBtn) {
+
+    cnsl('Follow button for event', followBtn);
+    followBtn.addEventListener('click', () => {
+        console.log('Follow button clicked');
+    });
+}
+
+function startLive() {
+    var request = new XMLHttpRequest();
+    request.open('GET', 'https://www.jeuxvideo.com/rss/forums/3013866.xml', true);
+
+    request.onload = function () {
+        if (this.status >= 200 && this.status < 400) {
+            // Success!
+            let parser = new DOMParser();
+            let xmlDoc = parser.parseFromString(this.response, "text/xml");
+            let items = xmlDoc.getElementsByTagName('item');
+
+            let topics = [];
+            for (item of items) {
+               topics.push(Topic.fromXML(item));
+            }
+
+            cnsl('Topics from XML', topics);
+
+        } else {
+            // We reached our target server, but it returned an error
+            cnsl('Request to update forum / topic failed');
+        }
+    };
+
+    request.onerror = function () {
+        // There was a connection error of some sort
+    };
+
+    request.send();
 }
