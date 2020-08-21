@@ -325,12 +325,6 @@ function addLiveButton() {
     // Ajout de la vue
     forumHeaderBloc.after(forumOptions);
 
-    // cnsl('HeaderBloc', forumHeaderBloc);
-
-    // // let target = document.getElementsByClassName('bloc-pre-pagi-forum')[0];
-    // cnsl('followBtn', followBtn);
-    // target.appendChild(followBtn);
-
     // Handle button clicks
     addLiveButtonListener(followBtn);
 
@@ -345,7 +339,9 @@ function addLiveButtonListener(followBtn) {
 
     cnsl('Follow button for event', followBtn);
     followBtn.addEventListener('click', () => {
-        console.log('Follow button clicked');
+        cnsl('Follow button clicked');
+        // Contact background script
+        chrome.runtime.sendMessage({ follow: "followRequest" });
     });
 }
 

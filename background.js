@@ -3,6 +3,8 @@ console.log('Background script loaded at', Date.now());
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "requestCurrentTab") {
         sendTabToContentScripts(sender);
+    } else if (request.follow) {
+        console.log('Request follow received');
     }
 
     if (request.reloadPage) {
@@ -10,6 +12,8 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         chrome.tabs.reload();
     }
 });
+
+setInterval(() => console.log('Hello from background script'), 10000);
 
 console.log('Background script initialize');
 
