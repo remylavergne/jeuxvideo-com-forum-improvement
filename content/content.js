@@ -269,7 +269,7 @@ class Topic {
         let date = '';
         let innerHTML = '';
         let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
-        
+
         return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
     }
 
@@ -310,14 +310,26 @@ function cnsl(text, data) {
  * Ajoute un bouton Suivre à un forum pour avoir les mises à jour en background
  */
 function addLiveButton() {
+    // Récupération du bloc header
+    // /!\ Il y a 2 header-bloc
+    let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
+    // Création de l'espace des options
+    let forumOptions = document.createElement('div');
+    forumOptions.classList.add('forum-options');
     // Création du bouton follow
     let followBtn = document.createElement('div');
     followBtn.classList.add('follow-btn');
     followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+    // Insertion des options
+    forumOptions.appendChild(followBtn);
+    // Ajout de la vue
+    forumHeaderBloc.after(forumOptions);
 
-    let target = document.getElementsByClassName('bloc-pre-pagi-forum')[0];
-    cnsl('followBtn', followBtn);
-    target.appendChild(followBtn);
+    // cnsl('HeaderBloc', forumHeaderBloc);
+
+    // // let target = document.getElementsByClassName('bloc-pre-pagi-forum')[0];
+    // cnsl('followBtn', followBtn);
+    // target.appendChild(followBtn);
 
     // Handle button clicks
     addLiveButtonListener(followBtn);
@@ -350,7 +362,7 @@ function startLive() {
 
             let topics = [];
             for (item of items) {
-               topics.push(Topic.fromXML(item));
+                topics.push(Topic.fromXML(item));
             }
 
             cnsl('Topics from XML', topics);
