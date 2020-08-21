@@ -13,15 +13,23 @@ Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous 
 - Télécharger la [dernière version disponible](https://github.com/remylavergne/jeuxvideo-com-forum-improvement/releases)
 - Et suivre ce tutoriel pour [installer une extension Chrome](https://developer.chrome.com/extensions/getstarted)
 
-## Roadmap / idées
+## Roadmap
 
-- MVP: Refresh
+- MVP: Refresh ✅
 - Background refresh check
 - Désactivation de la prévisualisation des messages
-- Dark Mode ?
-- Redirection vers le message le plus récent d'un topic
 - Prendre en compte no propre post dans le compte
+- Suivre un forum
+- Suivre un topic spécifique
+- Page d'administration des suivis
+
+## Idées
+
+- Dark Mode
+- Redirection vers le message le plus récent d'un topic
 - Agrandir la police de réponse au message 🤓
+- Mettre tous les sujets à "lu"
+- Changer les icônes du forum
 
 ## Sources
 
