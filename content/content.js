@@ -2,6 +2,7 @@ const debug = true;
 cnsl('Content script loaded at', Date.now());
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
+let snapshotInstance;
 
 // Script qui se lance à tout les lancements de page.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
@@ -9,9 +10,9 @@ chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.currentTab) {
         await init(request.currentTab);
-        // startLive();
-        addLiveButton();
     }
+
+    // if (request)
 });
 
 async function init(tab) {
@@ -33,6 +34,11 @@ async function init(tab) {
             // Ecouter les événements sur les topics pour mettre à jour les données
             watchUnreadTopics(forumInfos.id, htmlElementsToListen);
         }
+
+        addFollowButton();
+
+        return new ForumInformations(forumInfos.id, snapshot);
+
     } else {
         cnsl('Its not a top forum topic');
     }
@@ -306,10 +312,36 @@ function cnsl(text, data) {
 // Live
 // ---------------------------------
 
-/**
- * Ajoute un bouton Suivre à un forum pour avoir les mises à jour en background
- */
-function addLiveButton() {
+
+async function addFollowButton() {
+    const isFollowed = await isFollowedForum();
+    const followBtn = createButton(isFollowed);
+    // Handle button clicks
+    addLiveButtonListener(followBtn);
+}
+
+async function getFollowedForums() {
+    return new Promise(function (resolve, reject) {
+        chrome.storage.local.get('followedForums', function (result) {
+            resolve(result);
+        });
+    });
+}
+
+async function isFollowedForum() {
+    const follows = await getFollowedForums();
+    cnsl('Liste des forums suivis', follows);
+    const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+
+    if (follows['followedForums']) {
+        let isFollowed = follows.followedForums.includes(rssLink);
+        return isFollowed;
+    }
+
+    return false;
+}
+
+function createButton(isForumFollowed) {
     // Récupération du bloc header
     // /!\ Il y a 2 header-bloc
     let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
@@ -319,30 +351,56 @@ function addLiveButton() {
     // Création du bouton follow
     let followBtn = document.createElement('div');
     followBtn.classList.add('follow-btn');
-    followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+    // Button condition
+    updateFollowButtonUI(followBtn, isForumFollowed);
     // Insertion des options
     forumOptions.appendChild(followBtn);
     // Ajout de la vue
     forumHeaderBloc.after(forumOptions);
 
-    // Handle button clicks
-    addLiveButtonListener(followBtn);
-
     return followBtn;
 }
 
-/**
- * Ajoute un Event Listener sur un élément HTML
- * @param {HTMLElement} followBtn - HTMLElement
- */
+function updateFollowButtonUI(followBtn, isForumFollowed) {
+    if (isForumFollowed) {
+        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivi</button></a>';
+    } else {
+        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+    }
+}
+
 function addLiveButtonListener(followBtn) {
 
-    cnsl('Follow button for event', followBtn);
-    followBtn.addEventListener('click', () => {
-        cnsl('Follow button clicked');
+    followBtn.addEventListener('click', async () => {
+        // RSS Link
+        const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+        let isFollowed = await isFollowedForum();
         // Contact background script
-        chrome.runtime.sendMessage({ follow: "followRequest" });
+        chrome.runtime.sendMessage({ follow: new FollowStatus(rssLink, !isFollowed) });
+        // Update button
+        updateFollowButtonUI(followBtn, !isFollowed);
+        // Retrieve follows and update
+        let follows = await getFollowedForums();
+        // TODO => Move this
+        if (!follows['followedForums']) {
+            follows.followedForums = [];
+        }
+
+        if (isFollowed) {
+            let idx = follows.followedForums.findIndex(link => link === rssLink);
+            follows.followedForums.splice(idx, 1);
+        } else {
+            follows.followedForums.push(rssLink);
+        }
+        // Update snapshot
+        updateFollowStatus(follows);
     });
+}
+
+function updateFollowStatus(follows) {
+    chrome.storage.local.set(follows, () => {
+        cnsl('Liste de forum(s) suivi(s)', follows);
+    })
 }
 
 function startLive() {
@@ -374,4 +432,18 @@ function startLive() {
     };
 
     request.send();
+}
+
+class ForumInformations {
+    constructor(forumId, snapshot) {
+        this.forumId = forumId;
+        this.snapshot = snapshot;
+    }
+}
+
+class FollowStatus {
+    constructor(rss, follow) {
+        this.rss = rss;
+        this.follow = follow;
+    }
 }
