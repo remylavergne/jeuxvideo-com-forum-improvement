@@ -279,10 +279,6 @@ class Topic {
         return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
     }
 
-    // isRead() {
-    //     this.readPending = false;
-    // }
-
     isReadPending() {
         this.readPending = true;
     }
@@ -401,37 +397,6 @@ function updateFollowStatus(follows) {
     chrome.storage.local.set(follows, () => {
         cnsl('Liste de forum(s) suivi(s)', follows);
     })
-}
-
-function startLive() {
-    var request = new XMLHttpRequest();
-    request.open('GET', 'https://www.jeuxvideo.com/rss/forums/3013866.xml', true);
-
-    request.onload = function () {
-        if (this.status >= 200 && this.status < 400) {
-            // Success!
-            let parser = new DOMParser();
-            let xmlDoc = parser.parseFromString(this.response, "text/xml");
-            let items = xmlDoc.getElementsByTagName('item');
-
-            let topics = [];
-            for (item of items) {
-                topics.push(Topic.fromXML(item));
-            }
-
-            cnsl('Topics from XML', topics);
-
-        } else {
-            // We reached our target server, but it returned an error
-            cnsl('Request to update forum / topic failed');
-        }
-    };
-
-    request.onerror = function () {
-        // There was a connection error of some sort
-    };
-
-    request.send();
 }
 
 class ForumInformations {
