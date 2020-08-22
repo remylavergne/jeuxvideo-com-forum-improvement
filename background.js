@@ -1,5 +1,6 @@
 console.log('Background script loaded at', Date.now());
 let debug = true;
+let updates = [];
 // Récupère les messages émis
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "requestCurrentTab") {
@@ -7,6 +8,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     } else if (request.follow) {
         console.log('Request follow received', request.follow);
         // Check follow status
+    }
+
+    if (request.popup = 'doYouHaveUpdates') {
+        cnsl('Popup asks for updates');
+        chrome.runtime.sendMessage({ updates: updates });
     }
 
     if (request.reloadPage) {
@@ -20,14 +26,47 @@ async function checkFollowedForumsUpdate() {
     let follows = await getFollowedForums();
 
     if (follows.followedForums && follows.followedForums.length > 0) {
+        let badgeCount = 0;
+        updates = [];
+        // Récupération des derniers sujets à jour
         for (fluxRss of follows.followedForums) {
-            cnsl('Followed =>', fluxRss);
-            let topicsFromXML = await getTopics(fluxRss);
-
+            const topicsFromXML = await getTopics(fluxRss);
+            const forumId = topicsFromXML[0].forumId;
             cnsl('Topics extraits', topicsFromXML);
+            // allTopics.concat(topicsFromXML); // TODO => Obligatoire ?
+            const snapshot = await getLastSnapshot(forumId);
+
+            // Vérification de différence entre les topics du snapshot et du flux RSS
+            const xmlIds = topicsFromXML.map(topic => topic.id);
+            const snapshotIds = snapshot[forumId].topics.map(topic => topic.id);
+            const difference = xmlIds
+                .filter(x => !snapshotIds.includes(x))
+                .concat(snapshotIds.filter(x => !xmlIds.includes(x)));
+
+            cnsl('difference', difference);
+
+            if (difference.length > 0) {
+                // Nouvelle mise à jour
+                const update = new Update(forumId, topicsFromXML[0].forumUrl, difference.length);
+                updates.push(update);
+                // Update popup with a new link
+                // cnsl('Update found for forum', forumId);
+                badgeCount += 1;
+            }
         }
+
+        // Update Popup informations
+        updateBadge(badgeCount);
     } else {
         cnsl('Aucun forum suivi');
+    }
+}
+
+class Update {
+    constructor(forumId, forumUrl, diff) {
+        this.forumId = forumId;
+        this.forumUrl = forumUrl;
+        this.diff = diff;
     }
 }
 
@@ -39,17 +78,10 @@ async function getFollowedForums() {
     });
 }
 
-console.log('Background script initialize');
+function updateBadge(number) {
+    chrome.browserAction.setBadgeText({ text: number.toString() });
+}
 
-// function getCurrentTab() {
-//     chrome.tabs.query({
-//         "active": true,
-//         "currentWindow": true
-//     }, (tabs) => {
-//         console.log(tabs[0]);
-//         return tabs[0];
-//     });
-// }
 
 function sendTabToContentScripts(senderInformations) {
     console.log(senderInformations);
@@ -68,21 +100,22 @@ async function getTopics(rssLink) {
     return new Promise(function (resolve, reject) {
         var request = new XMLHttpRequest();
         request.open('GET', rssLink, true);
-    
+
         request.onload = function () {
             if (this.status >= 200 && this.status < 400) {
                 // Success!
                 let parser = new DOMParser();
                 let xmlDoc = parser.parseFromString(this.response, "text/xml");
                 let items = xmlDoc.getElementsByTagName('item');
-    
+                let forumUrl = xmlDoc.getElementsByTagName('link')[0].innerHTML.trim();
+
                 let topics = [];
                 for (item of items) {
-                    topics.push(Topic.fromXML(item));
+                    topics.push(Topic.fromXML(item, forumUrl));
                 }
-    
+
                 cnsl('Topics from XML', topics);
-    
+
                 resolve(topics);
             } else {
                 // We reached our target server, but it returned an error
@@ -90,25 +123,19 @@ async function getTopics(rssLink) {
                 reject('Error');
             }
         };
-    
+
         request.onerror = function () {
             // There was a connection error of some sort
         };
-    
+
         request.send();
     });
 }
 
-setInterval(checkFollowedForumsUpdate, 30000);
-
-class FollowUps {
-    constructor(links) {
-        this.links = links;
-    }
-}
+setInterval(checkFollowedForumsUpdate, 240 * 1000);
 
 class Topic {
-    constructor(id, url, subject, author, count, date, innerHTML, forumId) {
+    constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl) {
         this.id = id;
         this.url = url;
         this.subject = subject;
@@ -118,26 +145,14 @@ class Topic {
         this.innerHTML = innerHTML;
         this.readPending = false;
         this.forumId = forumId;
+        this.forumUrl = forumUrl;
     }
-
-    // static fromHTML(element) {
-    //     let id = element.dataset.id;
-    //     let url = ''; // TODO: Récupérer l'URL du topic dans le futur
-    //     let subject = element.children[0].innerText;
-    //     let author = element.children[1].innerText;
-    //     let count = element.children[2].innerText;
-    //     let date = element.children[3].innerText;
-    //     let innerHTML = element.innerHTML.trim();
-    //     let forumId = ''; // Récupérer l'id du forum
-
-    //     return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
-    // }
 
     /**
      * Extrait les informations depuis le flux RSS d'un forum spécifique
      * @param {XMLDocument} item - Document XML représentant un objet Topic
      */
-    static fromXML(item) {
+    static fromXML(item, forumUrl) {
         const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
         const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
         const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
@@ -156,7 +171,7 @@ class Topic {
         let innerHTML = '';
         let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl);
     }
 
     isReadPending() {
