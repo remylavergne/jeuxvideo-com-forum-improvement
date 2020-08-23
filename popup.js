@@ -22,7 +22,7 @@ function updateForumsList(updates) {
         const a = document.createElement('a');
         a.href = update.forumUrl;
         a.target = '_blank';
-        a.innerHTML = update.forumUrl + ' ' + '(' + update.diff + ')';
+        a.innerHTML = update.forumUrl + ' ' + '(' + update.switchedForums + ')' + '(' + update.updatedTopics + ')';
         li.appendChild(a);
 
         list.appendChild(li);
