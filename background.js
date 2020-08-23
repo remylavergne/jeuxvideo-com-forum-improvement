@@ -1,72 +1,89 @@
 console.log('Background script loaded at', Date.now());
+/**
+ * Variables
+ */
 let debug = true;
 let updates = [];
-// Récupère les messages émis
+
+/**
+ * Chrome API
+ */
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "requestCurrentTab") {
         sendTabToContentScripts(sender);
-    } else if (request.follow) {
-        console.log('Request follow received', request.follow);
-        // Check follow status
     }
 
     if (request.popup = 'doYouHaveUpdates') {
         cnsl('Popup asks for updates');
         chrome.runtime.sendMessage({ updates: updates });
     }
-
-    if (request.reloadPage) {
-        console.log('Reload requested');
-        chrome.tabs.reload();
-    }
 });
 
-async function checkFollowedForumsUpdate() {
-    cnsl('Start forum update search', Date.now());
-    let follows = await getFollowedForums();
+/**
+ * Functions
+ */
 
+async function checkFollowedForumsUpdate() {
+    const follows = await getFollowedForums();
+
+    const updatesTemp = [];
     if (follows.followedForums && follows.followedForums.length > 0) {
         let badgeCount = 0;
-        updates = [];
-        // Récupération des derniers sujets à jour
+        // Récupération des derniers sujets à jour pour chaque forum suivi
         for (fluxRss of follows.followedForums) {
             const topicsFromXML = await getTopics(fluxRss);
             const forumId = topicsFromXML[0].forumId;
-            cnsl('Topics extraits', topicsFromXML);
-            // allTopics.concat(topicsFromXML); // TODO => Obligatoire ?
             const snapshot = await getLastSnapshot(forumId);
+            const snapshotTopics = snapshot[forumId].topics;
 
-            // Vérification de différence entre les topics du snapshot et du flux RSS
-            const xmlIds = topicsFromXML.map(topic => topic.id);
-            const snapshotIds = snapshot[forumId].topics.map(topic => topic.id);
-            const difference = xmlIds
-                .filter(x => !snapshotIds.includes(x))
-                .concat(snapshotIds.filter(x => !xmlIds.includes(x)));
+            // Extrait le nombre de topics mis à jour
+            let updatedTopics = 0;
+            for (topic of snapshotTopics) {
+                let mostRecentTopic = topicsFromXML.find(t => t.id === topic.id);
 
-            cnsl('difference', difference);
+                if (mostRecentTopic) {
+                    const newMessage = (mostRecentTopic.count > topic.count);
 
-            if (difference.length > 0) {
+                    if (newMessage) {
+                        updatedTopics += 1;
+                    }
+                }
+            }
+
+            // Vérification de différence entre les topics du snapshot et du flux RSS nouveaux / anciens
+            const xmlTopicIds = topicsFromXML.map(topic => topic.id);
+            const snapshotTopicIds = snapshotTopics.map(topic => topic.id);
+
+            const switchedForums = xmlTopicIds
+                .filter(x => !snapshotTopicIds.includes(x))
+                .concat(snapshotTopicIds.filter(x => !xmlTopicIds.includes(x)));
+
+            if (switchedForums.length > 0 || updatedTopics > 0) {
                 // Nouvelle mise à jour
-                const update = new Update(forumId, topicsFromXML[0].forumUrl, difference.length);
-                updates.push(update);
-                // Update popup with a new link
-                // cnsl('Update found for forum', forumId);
+                const update = new Update(forumId, topicsFromXML[0].forumUrl, switchedForums.length, updatedTopics);
+                updatesTemp.push(update);
                 badgeCount += 1;
+                cnsl('Diff found for forum', topicsFromXML[0].forumUrl);
             }
         }
 
         // Update Popup informations
         updateBadge(badgeCount);
     } else {
-        cnsl('Aucun forum suivi');
+        cnsl('Aucun forum suivi', {});
     }
+
+    // Update instance -> Utiliser par la Popup
+    updates = updatesTemp;
 }
 
 class Update {
-    constructor(forumId, forumUrl, diff) {
+    constructor(forumId, forumUrl, switchedForums, updatedTopics) {
         this.forumId = forumId;
         this.forumUrl = forumUrl;
-        this.diff = diff;
+        this.switchedForums = switchedForums;
+        this.updatedTopics = updatedTopics;
     }
 }
 
@@ -81,7 +98,6 @@ async function getFollowedForums() {
 function updateBadge(number) {
     chrome.browserAction.setBadgeText({ text: number.toString() });
 }
-
 
 function sendTabToContentScripts(senderInformations) {
     console.log(senderInformations);
@@ -114,8 +130,6 @@ async function getTopics(rssLink) {
                     topics.push(Topic.fromXML(item, forumUrl));
                 }
 
-                cnsl('Topics from XML', topics);
-
                 resolve(topics);
             } else {
                 // We reached our target server, but it returned an error
@@ -132,7 +146,8 @@ async function getTopics(rssLink) {
     });
 }
 
-setInterval(checkFollowedForumsUpdate, 240 * 1000);
+// Le flux RSS est mis à jour toutes les 2 minutes
+setInterval(checkFollowedForumsUpdate, 120000);
 
 class Topic {
     constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl) {
@@ -146,6 +161,7 @@ class Topic {
         this.readPending = false;
         this.forumId = forumId;
         this.forumUrl = forumUrl;
+        this.createdAt = Date.now();
     }
 
     /**

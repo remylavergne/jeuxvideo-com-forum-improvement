@@ -238,6 +238,7 @@ class Topic {
         this.innerHTML = innerHTML;
         this.readPending = false;
         this.forumId = forumId;
+        this.createdAt = Date.now();
     }
 
     static fromHTML(element) {
