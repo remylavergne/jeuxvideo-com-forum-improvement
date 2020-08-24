@@ -1,5 +1,5 @@
 html {
-  width: 300px;
+  width: 400px;
 }
 
 body {
@@ -33,7 +33,7 @@ body {
 
 .link {
   text-decoration: none;
-  font-weight: 400;
+  font-weight: 700;
 }
 
 ul {
@@ -44,4 +44,24 @@ ul {
 
 h2 {
   color: blue;
+}
+
+/* unvisited link */
+a:link {
+  color: #006bd7;
+}
+
+/* visited link */
+a:visited {
+  color: #006bd7;
+}
+
+/* mouse over link */
+a:hover {
+  color: #006bd7;
+}
+
+/* selected link */
+a:active {
+  color: #006bd7;
 }
