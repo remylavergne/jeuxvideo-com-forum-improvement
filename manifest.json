@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
-    "name": "jv-com-chrome-extension",
-    "version": "0.0.1",
-    "description": "Extension pour suivre les topics du forum plus facilement.",
+    "name": "JV Live",
+    "version": "1.0.0",
+    "description": "Extension pour améliorer le suivi des forums de jeuxvideo.com.",
     "author": "Rémy Lavergne",
     "icons": {
         "16": "images/forum16.png",
