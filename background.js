@@ -1,10 +1,9 @@
-console.log('Background script loaded at', Date.now());
 /**
  * Variables
  */
-let debug = true;
+const debug = false;
 let updates = [];
-
+cnsl('Background script loaded at', Date.now());
 /**
  * Chrome API
  */
@@ -101,7 +100,6 @@ function updateBadge(number) {
 }
 
 function sendTabToContentScripts(senderInformations) {
-    console.log(senderInformations);
     chrome.tabs.sendMessage(senderInformations.tab.id, { currentTab: senderInformations });
 }
 

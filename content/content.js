@@ -1,4 +1,4 @@
-const debug = true;
+const debug = false;
 cnsl('Content script loaded at', Date.now());
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
@@ -69,7 +69,7 @@ async function getLastSnapshot(forumId) {
 /**
  * Cherche les topics qui ont été mis à jour.
  */
-function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cette méthode :D
+function searchChanges(previousTopics, currentTopics) {
 
     let updatedTopics = [];
 
@@ -92,15 +92,9 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
     let previousTopicsId = previousTopics.map(topic => topic.id);
     let currentTopicsId = currentTopics.map(topic => topic.id);
 
-    // DEBUG
-    // console.log('previousTopicsId', previousTopicsId);
-    // console.log('currentTopicsId', currentTopicsId);
-
     let newTopicsId = currentTopicsId.filter(x => !previousTopicsId.includes(x));
     let missingTopicsId = previousTopicsId.filter(x => !currentTopicsId.includes(x));
 
-    // console.log('newTopicsId', newTopicsId);
-    // console.log('missingTopicsId', missingTopicsId);
     // Nouveaux topics
     let newTopics = [];
     for (id of newTopicsId) {
@@ -179,7 +173,6 @@ function injectUpdatedElement(topicElements, updatedTopics) {
 async function watchUnreadTopics(forumId, elements) {
 
     for (i = 0; i < elements.length; i++) {
-        // TODO => Refactor
         (function (index) {
             let el = elements[index];
             el.addEventListener('click', async function () {
