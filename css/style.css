@@ -42,6 +42,10 @@ ul {
   padding: 0;
 }
 
+li {
+    margin-bottom: 5px;
+}
+
 h2 {
   color: blue;
 }
