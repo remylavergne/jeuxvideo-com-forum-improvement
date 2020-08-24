@@ -1,32 +1,31 @@
-let title = document.querySelector('#hello');
-let followBtn = document.getElementById('follow');
-
-followBtn.addEventListener('click', function(event) {
-    console.log('test');
-    // title.textContent = 'Salut';
-    getCurrentTab();
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+    if (request.updates) {
+        updateForumsList(request.updates);
+    }
 });
 
-chrome.tabs.query({
-    "active": true,
-    "currentWindow": true
-}, (tabs) => {
-    console.log(tabs[0]);
-});
+// Premier événement trigger à l'ouverture de la popup
+window.onload = function () {
+    askBackgroundForExistingUpdates();
 
- function getCurrentTab() {
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+}
 
-        // since only one tab should be active and in the current window at once
-        // the return variable should only have one entry
-        var activeTab = tabs[0];
-        var activeTabId = activeTab.id; // or do whatever you need
+function askBackgroundForExistingUpdates() {
+    chrome.runtime.sendMessage({ popup: 'doYouHaveUpdates' });
+}
 
-       alert(getTabUrl(activeTab));
-    
-     });
- }
+const list = document.getElementsByClassName('forum-urls')[0];
 
- function getTabUrl(tab) {
-    return tab.url;
- }
+function updateForumsList(updates) {
+    for (update of updates) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.classList.add('link');
+        a.href = update.forumUrl;
+        a.target = '_blank';
+        a.innerHTML = update.forumTitle + ' : ' + update.updatedTopics + ' sujet(s) à jour et ' + update.switchedForums + ' nouveau(x)';
+        li.appendChild(a);
+
+        list.appendChild(li);
+    }
+}

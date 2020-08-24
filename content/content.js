@@ -1,15 +1,18 @@
-const debug = true;
+const debug = false;
 cnsl('Content script loaded at', Date.now());
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
+let snapshotInstance;
 
 // Script qui se lance à tout les lancements de page.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.currentTab) {
-        init(request.currentTab);
+        await init(request.currentTab);
     }
+
+    // if (request)
 });
 
 async function init(tab) {
@@ -31,6 +34,11 @@ async function init(tab) {
             // Ecouter les événements sur les topics pour mettre à jour les données
             watchUnreadTopics(forumInfos.id, htmlElementsToListen);
         }
+
+        addFollowButton();
+
+        return new ForumInformations(forumInfos.id, snapshot);
+
     } else {
         cnsl('Its not a top forum topic');
     }
@@ -61,7 +69,7 @@ async function getLastSnapshot(forumId) {
 /**
  * Cherche les topics qui ont été mis à jour.
  */
-function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cette méthode :D
+function searchChanges(previousTopics, currentTopics) {
 
     let updatedTopics = [];
 
@@ -84,15 +92,9 @@ function searchChanges(previousTopics, currentTopics) { // TODO => Refactor cett
     let previousTopicsId = previousTopics.map(topic => topic.id);
     let currentTopicsId = currentTopics.map(topic => topic.id);
 
-    // DEBUG
-    // console.log('previousTopicsId', previousTopicsId);
-    // console.log('currentTopicsId', currentTopicsId);
-
     let newTopicsId = currentTopicsId.filter(x => !previousTopicsId.includes(x));
     let missingTopicsId = previousTopicsId.filter(x => !currentTopicsId.includes(x));
 
-    // console.log('newTopicsId', newTopicsId);
-    // console.log('missingTopicsId', missingTopicsId);
     // Nouveaux topics
     let newTopics = [];
     for (id of newTopicsId) {
@@ -123,7 +125,7 @@ function extractTopicsFromHTML() {
 
     var topics = [];
     for (var i = 1; i < topicsElements.length; i++) {
-        topics.push(new Topic(topicsElements[i]));
+        topics.push(Topic.fromHTML(topicsElements[i]));
     }
 
     return { topics: topics, elements: topicsElements };
@@ -171,7 +173,6 @@ function injectUpdatedElement(topicElements, updatedTopics) {
 async function watchUnreadTopics(forumId, elements) {
 
     for (i = 0; i < elements.length; i++) {
-        // TODO => Refactor
         (function (index) {
             let el = elements[index];
             el.addEventListener('click', async function () {
@@ -180,7 +181,7 @@ async function watchUnreadTopics(forumId, elements) {
                 let snapshot = await getLastSnapshot(forumInfos.id);
                 let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
                 // Create new topic object with current topic element informations
-                let updatedTopic = new Topic(el);
+                let updatedTopic = Topic.fromHTML(el);
                 snapshot[forumId].topics[idx] = updatedTopic;
                 // Synchronize updated snapshot to local storage
                 forumSnapshot(forumId, snapshot[forumId].topics);
@@ -216,20 +217,60 @@ async function updateSnapshot(forumId, snapshot, snapshotChanges) {
 
     return snapshot;
 }
+/**
+ * Toutes les informations permettant de suivre un topic et ses évolutions
+ */
 class Topic {
-    constructor(element) {
-        this.id = element.dataset.id;
-        this.url = ''; // TODO: Récupérer l'URL du topic dans le futur
-        this.subject = element.children[0].innerText;
-        this.author = element.children[1].innerText;
-        this.count = element.children[2].innerText;
-        this.date = element.children[3].innerText;
-        this.innerHTML = element.innerHTML.trim();
+    constructor(id, url, subject, author, count, date, innerHTML, forumId) {
+        this.id = id;
+        this.url = url;
+        this.subject = subject;
+        this.author = author;
+        this.count = count;
+        this.date = date;
+        this.innerHTML = innerHTML;
         this.readPending = false;
+        this.forumId = forumId;
+        this.createdAt = Date.now();
     }
 
-    isRead() {
-        this.readPending = false;
+    static fromHTML(element) {
+        let id = element.dataset.id;
+        let url = ''; // TODO: Récupérer l'URL du topic dans le futur
+        let subject = element.children[0].innerText;
+        let author = element.children[1].innerText;
+        let count = element.children[2].innerText;
+        let date = element.children[3].innerText;
+        let innerHTML = element.innerHTML.trim();
+        let forumId = ''; // Récupérer l'id du forum
+
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
+    }
+
+    /**
+     * Extrait les informations depuis le flux RSS d'un forum spécifique
+     * @param {XMLDocument} item - Document XML représentant un objet Topic
+     */
+    static fromXML(item) {
+        const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
+        const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
+        const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
+        const authorRegex = new RegExp(/topic: (.+)/g);
+        const countRegex = new RegExp(/\((\d+) .+\)/g);
+        // Process informations
+        let globalInfos = item.getElementsByTagName('description')[0].childNodes[0].nodeValue.trim();
+        let fullURL = item.getElementsByTagName('link')[0].childNodes[0].nodeValue.trim();
+
+        let id = (fullURL.match(idRegex) || []).map(e => e.replace(idRegex, '$1'))[0].trim();
+        let url = fullURL;
+        let subject = (globalInfos.match(subjectRegex) || []).map(e => e.replace(subjectRegex, '$1'))[0].trim();
+        let author = (globalInfos.match(authorRegex) || []).map(e => e.replace(authorRegex, '$1'))[0].trim();
+        let count = (globalInfos.match(countRegex) || []).map(e => e.replace(countRegex, '$1'))[0].trim();
+        let date = '';
+        let innerHTML = '';
+        let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
+
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId);
     }
 
     isReadPending() {
@@ -253,5 +294,115 @@ class SnapshotChanges {
 function cnsl(text, data) {
     if (debug) {
         console.log(text, data);
+    }
+}
+
+
+// ---------------------------------
+// Live
+// ---------------------------------
+
+
+async function addFollowButton() {
+    const isFollowed = await isFollowedForum();
+    const followBtn = createButton(isFollowed);
+    // Handle button clicks
+    addLiveButtonListener(followBtn);
+}
+
+async function getFollowedForums() {
+    return new Promise(function (resolve, reject) {
+        chrome.storage.local.get('followedForums', function (result) {
+            resolve(result);
+        });
+    });
+}
+
+async function isFollowedForum() {
+    const follows = await getFollowedForums();
+    cnsl('Liste des forums suivis', follows);
+    const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+
+    if (follows['followedForums']) {
+        let isFollowed = follows.followedForums.includes(rssLink);
+        return isFollowed;
+    }
+
+    return false;
+}
+
+function createButton(isForumFollowed) {
+    // Récupération du bloc header
+    // /!\ Il y a 2 header-bloc
+    let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
+    // Création de l'espace des options
+    let forumOptions = document.createElement('div');
+    forumOptions.classList.add('forum-options');
+    // Création du bouton follow
+    let followBtn = document.createElement('div');
+    followBtn.classList.add('follow-btn');
+    // Button condition
+    updateFollowButtonUI(followBtn, isForumFollowed);
+    // Insertion des options
+    forumOptions.appendChild(followBtn);
+    // Ajout de la vue
+    forumHeaderBloc.after(forumOptions);
+
+    return followBtn;
+}
+
+function updateFollowButtonUI(followBtn, isForumFollowed) {
+    if (isForumFollowed) {
+        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivi</button></a>';
+    } else {
+        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+    }
+}
+
+function addLiveButtonListener(followBtn) {
+
+    followBtn.addEventListener('click', async () => {
+        // RSS Link
+        const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+        let isFollowed = await isFollowedForum();
+        // Contact background script
+        chrome.runtime.sendMessage({ follow: new FollowStatus(rssLink, !isFollowed) });
+        // Update button
+        updateFollowButtonUI(followBtn, !isFollowed);
+        // Retrieve follows and update
+        let follows = await getFollowedForums();
+        // TODO => Move this
+        if (!follows['followedForums']) {
+            follows.followedForums = [];
+        }
+
+        if (isFollowed) {
+            let idx = follows.followedForums.findIndex(link => link === rssLink);
+            follows.followedForums.splice(idx, 1);
+        } else {
+            follows.followedForums.push(rssLink);
+        }
+        // Update snapshot
+        updateFollowStatus(follows);
+    });
+}
+
+function updateFollowStatus(follows) {
+    chrome.storage.local.set(follows, () => {
+        cnsl('Liste de forum(s) suivi(s)', follows);
+    })
+}
+
+class ForumInformations {
+    constructor(forumId, snapshot) {
+        this.forumId = forumId;
+        this.snapshot = snapshot;
+    }
+}
+
+class FollowStatus {
+    constructor(rss, follow) {
+        this.rss = rss;
+        this.follow = follow;
     }
 }
