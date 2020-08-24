@@ -20,9 +20,10 @@ function updateForumsList(updates) {
     for (update of updates) {
         const li = document.createElement('li');
         const a = document.createElement('a');
+        a.classList.add('link');
         a.href = update.forumUrl;
         a.target = '_blank';
-        a.innerHTML = update.forumUrl + ' ' + '(' + update.switchedForums + ')' + '(' + update.updatedTopics + ')';
+        a.innerHTML = update.forumTitle + ' : ' + update.updatedTopics + ' sujet(s) à jour et ' + update.switchedForums + ' nouveau(x)';
         li.appendChild(a);
 
         list.appendChild(li);

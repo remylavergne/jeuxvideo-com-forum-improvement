@@ -61,7 +61,7 @@ async function checkFollowedForumsUpdate() {
 
             if (switchedForums.length > 0 || updatedTopics > 0) {
                 // Nouvelle mise à jour
-                const update = new Update(forumId, topicsFromXML[0].forumUrl, switchedForums.length, updatedTopics);
+                const update = new Update(forumId, topicsFromXML[0].forumUrl, topicsFromXML[0].forumTitle, switchedForums.length / 2, updatedTopics);
                 updatesTemp.push(update);
                 badgeCount += 1;
                 cnsl('Diff found for forum', topicsFromXML[0].forumUrl);
@@ -79,9 +79,10 @@ async function checkFollowedForumsUpdate() {
 }
 
 class Update {
-    constructor(forumId, forumUrl, switchedForums, updatedTopics) {
+    constructor(forumId, forumUrl, forumTitle, switchedForums, updatedTopics) {
         this.forumId = forumId;
         this.forumUrl = forumUrl;
+        this.forumTitle = forumTitle;
         this.switchedForums = switchedForums;
         this.updatedTopics = updatedTopics;
     }
@@ -112,6 +113,10 @@ async function getLastSnapshot(forumId) {
     });
 }
 
+/**
+ * Extraction des informations sur les topics d'un forum
+ * @param {String} rssLink - Flux RSS d'un forum spécifique
+ */
 async function getTopics(rssLink) {
     return new Promise(function (resolve, reject) {
         var request = new XMLHttpRequest();
@@ -122,12 +127,18 @@ async function getTopics(rssLink) {
                 // Success!
                 let parser = new DOMParser();
                 let xmlDoc = parser.parseFromString(this.response, "text/xml");
-                let items = xmlDoc.getElementsByTagName('item');
-                let forumUrl = xmlDoc.getElementsByTagName('link')[0].innerHTML.trim();
+                cnsl('Document XML du flux RSS', xmlDoc);
+                // Title
+                const title = xmlDoc.getElementsByTagName('title')[0].innerHTML;
+                const forumTitleRegex = new RegExp(/(.+) - Forum jeuxvideo\.com/g);
+                const forumTitle = (title.match(forumTitleRegex) || []).map(e => e.replace(forumTitleRegex, '$1'))[0].trim();
+                cnsl('forumTitle', forumTitle);
+                const items = xmlDoc.getElementsByTagName('item');
+                const forumUrl = xmlDoc.getElementsByTagName('link')[0].innerHTML.trim();
 
                 let topics = [];
                 for (item of items) {
-                    topics.push(Topic.fromXML(item, forumUrl));
+                    topics.push(Topic.fromXML(item, forumUrl, forumTitle));
                 }
 
                 resolve(topics);
@@ -150,7 +161,7 @@ async function getTopics(rssLink) {
 setInterval(checkFollowedForumsUpdate, 120000);
 
 class Topic {
-    constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl) {
+    constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle) {
         this.id = id;
         this.url = url;
         this.subject = subject;
@@ -162,13 +173,14 @@ class Topic {
         this.forumId = forumId;
         this.forumUrl = forumUrl;
         this.createdAt = Date.now();
+        this.forumTitle = forumTitle;
     }
 
     /**
      * Extrait les informations depuis le flux RSS d'un forum spécifique
      * @param {XMLDocument} item - Document XML représentant un objet Topic
      */
-    static fromXML(item, forumUrl) {
+    static fromXML(item, forumUrl, forumTitle) {
         const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
         const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
         const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
@@ -187,7 +199,7 @@ class Topic {
         let innerHTML = '';
         let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl);
+        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
     }
 
     isReadPending() {
