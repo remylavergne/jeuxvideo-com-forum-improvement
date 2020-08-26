@@ -1,9 +1,9 @@
-window.onload = async function (eventHandler, ev) {
-    updateForumsList();
+window.onload = async function () {
+    createForumsList();
 };
 
 const body = document.getElementsByTagName('body')[0];
-console.log(body);
+
 body.addEventListener('click', event => {
     if (!event.target.classList.contains('btn-remove')) {
         return;
@@ -17,15 +17,7 @@ const list = document.getElementsByClassName('forum-urls')[0];
 
 // -- Functions
 
-async function getFollowedForums() {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.local.get('followedForums', function (result) {
-            resolve(result);
-        });
-    });
-}
-
-async function updateForumsList() {
+async function createForumsList() {
     const data = await getFollowedForums();
     const followedForums = data.followedForums;
     // Nettoyage de l'UI
@@ -55,27 +47,26 @@ async function updateForumsList() {
 }
 
 async function removeForumSubscription(forumUrl) {
-    console.log('forum to delete url ', forumUrl);
     // Récupérer les forums encore une fois.
     // L'utilisateur peut avoir suivi / supprimer d'autres forums entre temps
     const data = await getFollowedForums();
     // Trouver l'index du forum dans la liste
     const urls = data.followedForums.map(forum => forum.url);
     const idx = urls.findIndex(url => url === forumUrl);
+    // Get id
+    const forum = Forum.fromObject(data.followedForums[idx]);
 
     data.followedForums.splice(idx, 1);
 
     updateFollowStatus(data.followedForums);
     // Refresh UI
-    updateForumsList();
+    createForumsList();
+    // Supprimer le snapshot du forum
+    deleteForumSnapshot(forum.getId());
 }
 
-/**
- * Met à jour la liste des forums suivis par l'utilisateur
- * @param {Forum[]} followedForums - Liste des forums suivis
- */
-function updateFollowStatus(followedForums) {
-    chrome.storage.local.set({ followedForums: followedForums }, () => {
-        console.log('Forums suivis à jour');
-    })
+function deleteForumSnapshot(forumId) {
+    chrome.storage.local.remove(forumId, () => {
+        cnsl(`Forum ${forumId} snapshot deleted`);
+    });
 }
