@@ -20,13 +20,13 @@
         "storage"
     ],
     "background": {
-        "scripts":  ["background.js"],
+        "scripts":  ["./shared/js/classes.js", "./shared/js/functions.js", "background.js"],
         "persistent": false
     },
     "content_scripts": [
         {
             "matches": ["https://www.jeuxvideo.com/forums/*"],
-            "js": ["content/content.js"],
+            "js": ["./shared/js/classes.js", "./shared/js/functions.js", "content/content.js"],
             "css": ["css/content.css"]
         }
     ]

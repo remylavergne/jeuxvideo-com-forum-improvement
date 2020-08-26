@@ -1,7 +1,6 @@
 /**
  * Variables
  */
-const debug = false;
 let updates = [];
 cnsl('Background script loaded at', Date.now());
 /**
@@ -20,9 +19,12 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 /**
- * Functions
+ * Vérifie pour chaque forum suivi, si du contenu est disponible.
+ * Si oui, il compte le nombre de topic mis à jour, et vérifie aussi les différences entre nouveaux / anciens topics.
+ * Le badge de l'extension affiche ensuite le nombre de forum avec du nouveau contenu.
+ * 
+ * Cette liste de forum à jour est mise en instance, et le popup vient la récupérer lorsque l'utilisateur l'ouvre pour avoir les informations.
  */
-
 async function checkFollowedForumsUpdate() {
     const follows = await getFollowedForums();
 
@@ -99,17 +101,6 @@ class Update {
 }
 
 /**
- * Récupération du localStorage de tous les forums suivis par l'utilisateur
- */
-async function getFollowedForums() {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.local.get('followedForums', function (result) {
-            resolve(result);
-        });
-    });
-}
-
-/**
  * Mise à jour du nombre de forum mis à jour sur le badge de l'extension
  * @param {number} number - Nombre de forum mis à jour
  */
@@ -123,18 +114,6 @@ function updateBadge(number) {
  */
 function sendTabToContentScripts(senderInformations) {
     chrome.tabs.sendMessage(senderInformations.tab.id, { currentTab: senderInformations });
-}
-
-/**
- * Récupération du dernier snapshot des topics
- * @param {String} forumId - L'id du forum
- */
-async function getLastSnapshot(forumId) {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.local.get(forumId, function (result) {
-            resolve(result);
-        });
-    });
 }
 
 /**
@@ -181,95 +160,7 @@ async function getTopics(rssLink) {
     });
 }
 
-// Le flux RSS est mis à jour toutes les 2 minutes
-setInterval(checkFollowedForumsUpdate, 120000);
-
-class Topic {
-    constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle) {
-        this.id = id;
-        this.url = url;
-        this.subject = subject;
-        this.author = author;
-        this.count = count;
-        this.date = date;
-        this.innerHTML = innerHTML;
-        this.readPending = false;
-        this.forumId = forumId;
-        this.forumUrl = forumUrl;
-        this.createdAt = Date.now();
-        this.forumTitle = forumTitle;
-    }
-
-    /**
-     * Extrait les informations depuis le flux RSS d'un forum spécifique
-     * @param {XMLDocument} item - Document XML représentant un objet Topic
-     */
-    static fromXML(item, forumUrl, forumTitle) {
-        const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
-        const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
-        const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
-        const authorRegex = new RegExp(/topic: (.+)/g);
-        const countRegex = new RegExp(/\((\d+) .+\)/g);
-        // Process informations
-        let globalInfos = item.getElementsByTagName('description')[0].childNodes[0].nodeValue.trim();
-        let fullURL = item.getElementsByTagName('link')[0].childNodes[0].nodeValue.trim();
-
-        let id = (fullURL.match(idRegex) || []).map(e => e.replace(idRegex, '$1'))[0].trim();
-        let url = fullURL;
-        let subject = (globalInfos.match(subjectRegex) || []).map(e => e.replace(subjectRegex, '$1'))[0].trim();
-        let author = (globalInfos.match(authorRegex) || []).map(e => e.replace(authorRegex, '$1'))[0].trim();
-        let count = (globalInfos.match(countRegex) || []).map(e => e.replace(countRegex, '$1'))[0].trim();
-        let date = '';
-        let innerHTML = '';
-        let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
-
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
-    }
-
-    isReadPending() {
-        this.readPending = true;
-    }
-}
-
-class Forum {
-    /**
-     * Informations pour l'affichage d'un forum suivi dans les options globales 
-     * @param {String} name - Titre du forum // TODO => faire une regex
-     * @param {String} url - URL du forum
-     * @param {String} rssUrl - URL du flux RSS
-     */
-    constructor(name, url, rssUrl) {
-        this.name = name;
-        this.url = url;
-        this.rssUrl = rssUrl;
-    }
-
-    getId() {
-        // Check if URL is a global game forum
-        let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
-        let matchs = forumUrl.match(regex);
-
-        if (matchs && matchs.length > 0) {
-            const forumId = matchs[0].split("-")[1];
-
-            return forumId;
-        } else {
-            return null;
-        }
-    }
-}
-
-// --------------------------------
-// Utils
-// --------------------------------
-
 /**
- * Affichage des logs en debug
- * @param {String} text 
- * @param {any} data 
+ * Démarrage de la vérification des mises à jour des forums.
  */
-function cnsl(text, data) {
-    if (debug) {
-        console.log(text, data);
-    }
-}
+setInterval(checkFollowedForumsUpdate, 120000);

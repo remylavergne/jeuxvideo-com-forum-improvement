@@ -1,5 +1,5 @@
-window.onload = async function (eventHandler, ev) {
-    updateForumsList();
+window.onload = async function () {
+    createForumsList();
 };
 
 const body = document.getElementsByTagName('body')[0];
@@ -17,15 +17,7 @@ const list = document.getElementsByClassName('forum-urls')[0];
 
 // -- Functions
 
-async function getFollowedForums() {
-    return new Promise(function (resolve, reject) {
-        chrome.storage.local.get('followedForums', function (result) {
-            resolve(result);
-        });
-    });
-}
-
-async function updateForumsList() {
+async function createForumsList() {
     const data = await getFollowedForums();
     const followedForums = data.followedForums;
     // Nettoyage de l'UI
@@ -68,55 +60,13 @@ async function removeForumSubscription(forumUrl) {
 
     updateFollowStatus(data.followedForums);
     // Refresh UI
-    updateForumsList();
+    createForumsList();
     // Supprimer le snapshot du forum
     deleteForumSnapshot(forum.getId());
 }
 
-/**
- * Met à jour la liste des forums suivis par l'utilisateur
- * @param {Forum[]} followedForums - Liste des forums suivis
- */
-function updateFollowStatus(followedForums) {
-    chrome.storage.local.set({ followedForums: followedForums }, () => {
-        console.log('Forums suivis à jour');
-    })
-}
-
 function deleteForumSnapshot(forumId) {
     chrome.storage.local.remove(forumId, () => {
-        console.log(`Forum ${forumId} snapshot deleted`);
+        cnsl(`Forum ${forumId} snapshot deleted`);
     });
-}
-
-class Forum {
-    /**
-     * Informations pour l'affichage d'un forum suivi dans les options globales 
-     * @param {String} name - Titre du forum // TODO => faire une regex
-     * @param {String} url - URL du forum
-     * @param {String} rssUrl - URL du flux RSS
-     */
-    constructor(name, url, rssUrl) {
-        this.name = name;
-        this.url = url;
-        this.rssUrl = rssUrl;
-    }
-
-    getId() {
-        // Check if URL is a global game forum
-        let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
-        let matchs = this.url.match(regex);
-
-        if (matchs && matchs.length > 0) {
-            const forumId = matchs[0].split("-")[1];
-
-            return forumId;
-        } else {
-            return null;
-        }
-    }
-
-    static fromObject(obj) {
-        return new Forum(obj.name, obj.url, obj.rssUrl);
-    }
 }
