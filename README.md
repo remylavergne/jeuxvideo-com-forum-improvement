@@ -33,6 +33,10 @@ Si c'est le cas, une notification, et un raccourci s'afficheront sur l'icône de
 
 ![](resources/update-links.png)
 
+-> Gestion des forums que vous suivez. Vous avez une vu globale et vous pouvez choisir de ne plus suivre un forum d'un simple clic.
+
+![](resources/options-forums.png)
+
 ## Roadmap
 
 - MVP: Refresh ✅
