@@ -37,7 +37,6 @@ Si c'est le cas, une notification, et un raccourci s'afficheront sur l'icône de
 
 ![](resources/options-forums.png)
 
-## Roadmap
 ## 🚗 Roadmap
 
 - MVP: Refresh ✅
