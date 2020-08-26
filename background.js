@@ -243,6 +243,20 @@ class Forum {
         this.url = url;
         this.rssUrl = rssUrl;
     }
+
+    getId() {
+        // Check if URL is a global game forum
+        let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
+        let matchs = forumUrl.match(regex);
+
+        if (matchs && matchs.length > 0) {
+            const forumId = matchs[0].split("-")[1];
+
+            return forumId;
+        } else {
+            return null;
+        }
+    }
 }
 
 // --------------------------------

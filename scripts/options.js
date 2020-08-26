@@ -3,7 +3,7 @@ window.onload = async function (eventHandler, ev) {
 };
 
 const body = document.getElementsByTagName('body')[0];
-console.log(body);
+
 body.addEventListener('click', event => {
     if (!event.target.classList.contains('btn-remove')) {
         return;
@@ -55,19 +55,22 @@ async function updateForumsList() {
 }
 
 async function removeForumSubscription(forumUrl) {
-    console.log('forum to delete url ', forumUrl);
     // Récupérer les forums encore une fois.
     // L'utilisateur peut avoir suivi / supprimer d'autres forums entre temps
     const data = await getFollowedForums();
     // Trouver l'index du forum dans la liste
     const urls = data.followedForums.map(forum => forum.url);
     const idx = urls.findIndex(url => url === forumUrl);
+    // Get id
+    const forum = Forum.fromObject(data.followedForums[idx]);
 
     data.followedForums.splice(idx, 1);
 
     updateFollowStatus(data.followedForums);
     // Refresh UI
     updateForumsList();
+    // Supprimer le snapshot du forum
+    deleteForumSnapshot(forum.getId());
 }
 
 /**
@@ -78,4 +81,42 @@ function updateFollowStatus(followedForums) {
     chrome.storage.local.set({ followedForums: followedForums }, () => {
         console.log('Forums suivis à jour');
     })
+}
+
+function deleteForumSnapshot(forumId) {
+    chrome.storage.local.remove(forumId, () => {
+        console.log(`Forum ${forumId} snapshot deleted`);
+    });
+}
+
+class Forum {
+    /**
+     * Informations pour l'affichage d'un forum suivi dans les options globales 
+     * @param {String} name - Titre du forum // TODO => faire une regex
+     * @param {String} url - URL du forum
+     * @param {String} rssUrl - URL du flux RSS
+     */
+    constructor(name, url, rssUrl) {
+        this.name = name;
+        this.url = url;
+        this.rssUrl = rssUrl;
+    }
+
+    getId() {
+        // Check if URL is a global game forum
+        let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
+        let matchs = this.url.match(regex);
+
+        if (matchs && matchs.length > 0) {
+            const forumId = matchs[0].split("-")[1];
+
+            return forumId;
+        } else {
+            return null;
+        }
+    }
+
+    static fromObject(obj) {
+        return new Forum(obj.name, obj.url, obj.rssUrl);
+    }
 }
