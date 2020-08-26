@@ -30,8 +30,8 @@ async function checkFollowedForumsUpdate() {
     if (follows.followedForums && follows.followedForums.length > 0) {
         let badgeCount = 0;
         // Récupération des derniers sujets à jour pour chaque forum suivi
-        for (fluxRss of follows.followedForums) {
-            const topicsFromXML = await getTopics(fluxRss);
+        for (forum of follows.followedForums) {
+            const topicsFromXML = await getTopics(forum.rssUrl);
             const forumId = topicsFromXML[0].forumId;
             const snapshot = await getLastSnapshot(forumId);
             const snapshotTopics = snapshot[forumId].topics;
@@ -60,7 +60,7 @@ async function checkFollowedForumsUpdate() {
 
             if (switchedForums.length > 0 || updatedTopics > 0) {
                 // Nouvelle mise à jour
-                const update = new Update(forumId, topicsFromXML[0].forumUrl, topicsFromXML[0].forumTitle, switchedForums.length / 2, updatedTopics);
+                const update = new Update(forumId, topicsFromXML[0].forumUrl, topicsFromXML[0].forumTitle, switchedForums.length / 2, updatedTopics, forum);
                 updatesTemp.push(update);
                 badgeCount += 1;
                 cnsl('Diff found for forum', topicsFromXML[0].forumUrl);
@@ -77,16 +77,30 @@ async function checkFollowedForumsUpdate() {
     updates = updatesTemp;
 }
 
+
 class Update {
-    constructor(forumId, forumUrl, forumTitle, switchedForums, updatedTopics) {
+    /**
+     * Informations liées à une mise à jour d'un forum
+     * @param {String} forumId 
+     * @param {String} forumUrl 
+     * @param {String} forumTitle
+     * @param {number} switchedForums - Le nombre de nouveaux topics
+     * @param {number} updatedTopics - Nombre de topics mis à jour
+     * @param {Forum} forum - Informations générale pour l'affichage des options
+     */
+    constructor(forumId, forumUrl, forumTitle, switchedForums, updatedTopics, forum) {
         this.forumId = forumId;
         this.forumUrl = forumUrl;
         this.forumTitle = forumTitle;
         this.switchedForums = switchedForums;
         this.updatedTopics = updatedTopics;
+        this.forum = forum;
     }
 }
 
+/**
+ * Récupération du localStorage de tous les forums suivis par l'utilisateur
+ */
 async function getFollowedForums() {
     return new Promise(function (resolve, reject) {
         chrome.storage.local.get('followedForums', function (result) {
@@ -95,14 +109,26 @@ async function getFollowedForums() {
     });
 }
 
+/**
+ * Mise à jour du nombre de forum mis à jour sur le badge de l'extension
+ * @param {number} number - Nombre de forum mis à jour
+ */
 function updateBadge(number) {
     chrome.browserAction.setBadgeText({ text: number.toString() });
 }
 
+/**
+ * Informations demandées par le content script au sujet de sa tab actuelle
+ * @param {*} senderInformations 
+ */
 function sendTabToContentScripts(senderInformations) {
     chrome.tabs.sendMessage(senderInformations.tab.id, { currentTab: senderInformations });
 }
 
+/**
+ * Récupération du dernier snapshot des topics
+ * @param {String} forumId - L'id du forum
+ */
 async function getLastSnapshot(forumId) {
     return new Promise(function (resolve, reject) {
         chrome.storage.local.get(forumId, function (result) {
@@ -202,6 +228,20 @@ class Topic {
 
     isReadPending() {
         this.readPending = true;
+    }
+}
+
+class Forum {
+    /**
+     * Informations pour l'affichage d'un forum suivi dans les options globales 
+     * @param {String} name - Titre du forum // TODO => faire une regex
+     * @param {String} url - URL du forum
+     * @param {String} rssUrl - URL du flux RSS
+     */
+    constructor(name, url, rssUrl) {
+        this.name = name;
+        this.url = url;
+        this.rssUrl = rssUrl;
     }
 }
 

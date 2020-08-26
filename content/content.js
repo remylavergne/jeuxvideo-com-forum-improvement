@@ -3,12 +3,14 @@ cnsl('Content script loaded at', Date.now());
 let forumInfos = { id: '', isTopForum: false };
 let lastTopics = [];
 let snapshotInstance;
+let currentTab;
 
 // Script qui se lance à tout les lancements de page.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
 
 chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.currentTab) {
+        currentTab = request.currentTab;
         await init(request.currentTab);
     }
 
@@ -324,7 +326,9 @@ async function isFollowedForum() {
     const rssLink = document.getElementsByClassName('picto-rss')[0].href;
 
     if (follows['followedForums']) {
-        let isFollowed = follows.followedForums.includes(rssLink);
+        // Map() all RSS links
+        const rssURLs = follows.followedForums.map(forum => forum.rssUrl);
+        let isFollowed = rssURLs.includes(rssLink);
         return isFollowed;
     }
 
@@ -359,37 +363,49 @@ function updateFollowButtonUI(followBtn, isForumFollowed) {
     }
 }
 
+/**
+ * Ajoute un listener de clic sur le bouton "Suivre"
+ * @param {HTMLElement} followBtn 
+ */
 function addLiveButtonListener(followBtn) {
 
     followBtn.addEventListener('click', async () => {
-        // RSS Link
+        // Récupération du lien RSS du forum
         const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+        // Vérifie si le forum actuel est suivi, ou non
         let isFollowed = await isFollowedForum();
         // Contact background script
-        chrome.runtime.sendMessage({ follow: new FollowStatus(rssLink, !isFollowed) });
+        // chrome.runtime.sendMessage({ follow: new FollowStatus(rssLink, !isFollowed) });
         // Update button
         updateFollowButtonUI(followBtn, !isFollowed);
         // Retrieve follows and update
-        let follows = await getFollowedForums();
+        const follows = await getFollowedForums();
         // TODO => Move this
         if (!follows['followedForums']) {
             follows.followedForums = [];
         }
 
         if (isFollowed) {
-            let idx = follows.followedForums.findIndex(link => link === rssLink);
+            const links = follows.followedForums.map(forum => forum.rssUrl);
+            let idx = links.findIndex(link => link === rssLink);
+            // On supprime le forum du suivi
             follows.followedForums.splice(idx, 1);
         } else {
-            follows.followedForums.push(rssLink);
+            const newFollowedForum = new Forum(currentTab.tab.title, currentTab.tab.url, rssLink);
+            follows.followedForums.push(newFollowedForum);
         }
         // Update snapshot
-        updateFollowStatus(follows);
+        updateFollowStatus(follows.followedForums);
     });
 }
 
-function updateFollowStatus(follows) {
-    chrome.storage.local.set(follows, () => {
-        cnsl('Liste de forum(s) suivi(s)', follows);
+/**
+ * Met à jour la liste des forums suivis par l'utilisateur
+ * @param {Forum[]} followedForums - Liste des forums suivis
+ */
+function updateFollowStatus(followedForums) {
+    chrome.storage.local.set({ followedForums: followedForums }, () => {
+        cnsl('Liste de forum(s) suivi(s)', followedForums);
     })
 }
 
@@ -404,5 +420,13 @@ class FollowStatus {
     constructor(rss, follow) {
         this.rss = rss;
         this.follow = follow;
+    }
+}
+
+class Forum {
+    constructor(name, url, rssUrl) {
+        this.name = name;
+        this.url = url;
+        this.rssUrl = rssUrl;
     }
 }
