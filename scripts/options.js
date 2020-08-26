@@ -52,8 +52,6 @@ async function updateForumsList() {
         li.appendChild(a);
         list.appendChild(li);
     }
-
-    // TODO => Retourner les éléments pour bind un clic listener
 }
 
 async function removeForumSubscription(forumUrl) {
