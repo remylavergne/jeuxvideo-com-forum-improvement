@@ -13,7 +13,7 @@
         "default_icon": "images/forum16.png",
         "default_popup": "popup.html"
     },
-    "options_page": "games-list.html",
+    "options_page": "global-options.html",
     "permissions": [
         "storage",
         "tabs",
