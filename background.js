@@ -1,7 +1,7 @@
 /**
  * Variables
  */
-const debug = true;
+const debug = false;
 let updates = [];
 cnsl('Background script loaded at', Date.now());
 /**
