@@ -1,3 +1,5 @@
+import { Update } from "./classes";
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.updates) {
         updateForumsList(request.updates);
@@ -16,8 +18,8 @@ function askBackgroundForExistingUpdates() {
 
 const list = document.getElementsByClassName('forum-urls')[0];
 
-function updateForumsList(updates) {
-    for (update of updates) {
+function updateForumsList(updates: Update[]): void {
+    for (let update of updates) {
         const li = document.createElement('li');
         const a = document.createElement('a');
         a.classList.add('link');

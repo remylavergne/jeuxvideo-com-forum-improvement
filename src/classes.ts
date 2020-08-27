@@ -1,15 +1,20 @@
+import { cnsl } from "./functions";
+
 /**
  * Classe représentant un forum, avec le minimum d'informations
  * pour la communication entre le background script et les options.
  */
-class Forum {
+export class Forum {
+    name: string;
+    url: string;
+    rssUrl: string;
     /**
      * Informations pour l'affichage d'un forum suivi dans les options globales 
-     * @param {String} name - Titre du forum // TODO => faire une regex
-     * @param {String} url - URL du forum
-     * @param {String} rssUrl - URL du flux RSS
+     * @param {string} name - Titre du forum // TODO => faire une regex
+     * @param {string} url - URL du forum
+     * @param {string} rssUrl - URL du flux RSS
      */
-    constructor(name, url, rssUrl) {
+    constructor(name: string, url: string, rssUrl: string) {
         this.name = name;
         this.url = url;
         this.rssUrl = rssUrl;
@@ -18,7 +23,7 @@ class Forum {
     /**
      * Récupérer l'id en fonction de l'url du forum.
      */
-    getId() {
+    getId(): string {
         // Check if URL is a global game forum
         let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
         let matchs = this.url.match(regex);
@@ -36,7 +41,7 @@ class Forum {
      * Création d'un objet Forum
      * @param {Object} obj 
      */
-    static fromObject(obj) {
+    static fromObject(obj): Forum { // TODO => plus besoin avec les types
         return new Forum(obj.name, obj.url, obj.rssUrl);
     }
 }
@@ -44,21 +49,32 @@ class Forum {
 /**
  * Classe représentant un message d'un forum
  */
-class Topic {
-    /**
-     * Constructeur permettant d'avoir un Topic
-     * @param {String} id 
-     * @param {String} url 
-     * @param {String} subject 
-     * @param {String} author 
-     * @param {number} count - Nombre de réponse dans le topic
-     * @param {number} date 
-     * @param {String} innerHTML 
-     * @param {String} forumId 
-     * @param {String} forumUrl 
-     * @param {String} forumTitle 
-     */
-    constructor(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle) {
+export class Topic {
+    id: string;
+    url: string;
+    subject: string;
+    author: string;
+    count: string;
+    date: string;
+    innerHTML: string;
+    readPending: boolean;
+    forumId: string;
+    forumUrl: string;
+    createdAt: number;
+    forumTitle: string;
+
+    constructor(
+        id: string,
+        url: string,
+        subject: string,
+        author: string,
+        count: string,
+        date: string,
+        innerHTML: string,
+        forumId: string,
+        forumUrl: string,
+        forumTitle: string
+    ) {
         this.id = id;
         this.url = url;
         this.subject = subject;
@@ -77,15 +93,20 @@ class Topic {
      * Générer un Topic à partir d'un élément HTML représentant un message
      * @param {HTMLElement} element 
      */
-    static fromHTML(element) {
-        let id = element.dataset.id;
-        let url = ''; // TODO => Récupérer l'URL du topic dans le futur
+    static fromHTML(element): Topic {
+        // cnsl('element reçu de lHTML', element);
+        const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
+        const urlFull = element.querySelector('.lien-jv').href;
+        const urlMatchs = urlFull.match(idRegex)[0].split('-');
+
+        let id = urlMatchs[2];
+        let url = urlFull; // TODO => Récupérer l'URL du topic dans le futur
         let subject = element.children[0].innerText;
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
         let date = element.children[3].innerText;
         let innerHTML = element.innerHTML.trim();
-        let forumId = ''; // TODO => Récupérer l'id du forum
+        let forumId = urlMatchs[1];
         let forumUrl = ''
         let forumTitle = '';
 
@@ -96,7 +117,7 @@ class Topic {
      * Extrait les informations depuis le flux RSS d'un forum spécifique
      * @param {XMLDocument} item - Document XML représentant un objet Topic
      */
-    static fromXML(item, forumUrl, forumTitle) {
+    static fromXML(item: Element, forumUrl: string, forumTitle: string) {
         const forumIdRegex = new RegExp(/forums\/\d+-(\d+)-\d+-/g);
         const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
         const subjectRegex = new RegExp(/:(.+)\(\d+ .+\)/g);
@@ -121,7 +142,70 @@ class Topic {
     /**
      * Passer le topic en attente de lecture
      */
-    isReadPending() {
+    isReadPending(): void {
         this.readPending = true;
+    }
+}
+
+export interface ForumsFollowed {
+    followedForums: Forum[];
+}
+
+export class Update {
+    forumId: string;
+    forumUrl: string;
+    forumTitle: string;
+    switchedForums: number;
+    updatedTopics: number;
+    forum: Forum;
+
+    /**
+     * Informations liées à une mise à jour d'un forum
+     * @param {string} forumId 
+     * @param {string} forumUrl 
+     * @param {string} forumTitle
+     * @param {number} switchedForums - Le nombre de nouveaux topics
+     * @param {number} updatedTopics - Nombre de topics mis à jour
+     * @param {Forum} forum - Informations générale pour l'affichage des options
+     */
+    constructor(forumId: string, forumUrl: string, forumTitle: string, switchedForums: number, updatedTopics: number, forum: Forum) {
+        this.forumId = forumId;
+        this.forumUrl = forumUrl;
+        this.forumTitle = forumTitle;
+        this.switchedForums = switchedForums;
+        this.updatedTopics = updatedTopics;
+        this.forum = forum;
+    }
+}
+
+export interface Snapshot {
+    [key: string]: SnapshotTopics;
+}
+
+export interface SnapshotTopics {
+    createdTime: number;
+    topics: Topic[];
+}
+
+export interface ForumInfos {
+    id?: string;
+    isTopForum: boolean;
+    snapshot?: Snapshot;
+}
+
+export interface TopicsAndElements {
+    elements: HTMLCollectionOf<HTMLLIElement>;
+    topics: Topic[];
+}
+
+export class SnapshotChanges {
+    updated: Topic[];
+    added: Topic[];
+    deleted: Topic[];
+
+    constructor(updated: Topic[], added: Topic[], deleted: Topic[]) {
+        this.updated = updated;
+        this.added = added;
+        this.deleted = deleted;
     }
 }

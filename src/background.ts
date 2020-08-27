@@ -1,3 +1,6 @@
+import { cnsl, getFollowedForums, getLastSnapshot } from "./functions";
+import { ForumsFollowed, Topic, Snapshot, Update } from "./classes";
+
 /**
  * Variables
  */
@@ -26,21 +29,22 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
  * Cette liste de forum à jour est mise en instance, et le popup vient la récupérer lorsque l'utilisateur l'ouvre pour avoir les informations.
  */
 async function checkFollowedForumsUpdate() {
-    const follows = await getFollowedForums();
+    const forums: ForumsFollowed = await getFollowedForums();
 
     const updatesTemp = [];
-    if (follows.followedForums && follows.followedForums.length > 0) {
+    if (forums.followedForums && forums.followedForums.length > 0) {
+
         let badgeCount = 0;
         // Récupération des derniers sujets à jour pour chaque forum suivi
-        for (forum of follows.followedForums) {
-            const topicsFromXML = await getTopics(forum.rssUrl);
+        for (let forum of forums.followedForums) {
+            const topicsFromXML: Topic[] = await getTopics(forum.rssUrl);
             const forumId = topicsFromXML[0].forumId;
-            const snapshot = await getLastSnapshot(forumId);
-            const snapshotTopics = snapshot[forumId].topics;
+            const snapshot: Snapshot = await getLastSnapshot(forumId);
+            const snapshotTopics: Topic[] = snapshot[forumId].topics;
 
             // Extrait le nombre de topics mis à jour
             let updatedTopics = 0;
-            for (topic of snapshotTopics) {
+            for (let topic of snapshotTopics) {
                 let mostRecentTopic = topicsFromXML.find(t => t.id === topic.id);
 
                 if (mostRecentTopic) {
@@ -65,7 +69,6 @@ async function checkFollowedForumsUpdate() {
                 const update = new Update(forumId, topicsFromXML[0].forumUrl, topicsFromXML[0].forumTitle, switchedForums.length / 2, updatedTopics, forum);
                 updatesTemp.push(update);
                 badgeCount += 1;
-                cnsl('Diff found for forum', topicsFromXML[0].forumUrl);
             }
         }
 
@@ -79,32 +82,11 @@ async function checkFollowedForumsUpdate() {
     updates = updatesTemp;
 }
 
-
-class Update {
-    /**
-     * Informations liées à une mise à jour d'un forum
-     * @param {String} forumId 
-     * @param {String} forumUrl 
-     * @param {String} forumTitle
-     * @param {number} switchedForums - Le nombre de nouveaux topics
-     * @param {number} updatedTopics - Nombre de topics mis à jour
-     * @param {Forum} forum - Informations générale pour l'affichage des options
-     */
-    constructor(forumId, forumUrl, forumTitle, switchedForums, updatedTopics, forum) {
-        this.forumId = forumId;
-        this.forumUrl = forumUrl;
-        this.forumTitle = forumTitle;
-        this.switchedForums = switchedForums;
-        this.updatedTopics = updatedTopics;
-        this.forum = forum;
-    }
-}
-
 /**
  * Mise à jour du nombre de forum mis à jour sur le badge de l'extension
  * @param {number} number - Nombre de forum mis à jour
  */
-function updateBadge(number) {
+function updateBadge(number: number): void {
     chrome.browserAction.setBadgeText({ text: number.toString() });
 }
 
@@ -112,22 +94,21 @@ function updateBadge(number) {
  * Informations demandées par le content script au sujet de sa tab actuelle
  * @param {*} senderInformations 
  */
-function sendTabToContentScripts(senderInformations) {
+function sendTabToContentScripts(senderInformations): void {
     chrome.tabs.sendMessage(senderInformations.tab.id, { currentTab: senderInformations });
 }
 
 /**
  * Extraction des informations sur les topics d'un forum
- * @param {String} rssLink - Flux RSS d'un forum spécifique
+ * @param {string} rssLink - Flux RSS d'un forum spécifique
  */
-async function getTopics(rssLink) {
-    return new Promise(function (resolve, reject) {
+async function getTopics(rssLink: string): Promise<Topic[]> {
+    return new Promise<Topic[]>(function (resolve, reject) {
         var request = new XMLHttpRequest();
         request.open('GET', rssLink, true);
 
         request.onload = function () {
             if (this.status >= 200 && this.status < 400) {
-                // Success!
                 let parser = new DOMParser();
                 let xmlDoc = parser.parseFromString(this.response, "text/xml");
                 cnsl('Document XML du flux RSS', xmlDoc);
@@ -139,8 +120,8 @@ async function getTopics(rssLink) {
                 const items = xmlDoc.getElementsByTagName('item');
                 const forumUrl = xmlDoc.getElementsByTagName('link')[0].innerHTML.trim();
 
-                let topics = [];
-                for (item of items) {
+                let topics: Topic[] = [];
+                for (let item of items) {
                     topics.push(Topic.fromXML(item, forumUrl, forumTitle));
                 }
 
