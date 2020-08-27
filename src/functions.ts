@@ -1,6 +1,6 @@
 import { ForumsFollowed, Snapshot } from "./classes";
 
-const debug = true;
+const debug = false; // TODO => export into global configuration
 
 /**
  * Met à jour la liste des forums suivis par l'utilisateur

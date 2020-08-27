@@ -69,7 +69,6 @@ async function checkFollowedForumsUpdate() {
                 const update = new Update(forumId, topicsFromXML[0].forumUrl, topicsFromXML[0].forumTitle, switchedForums.length / 2, updatedTopics, forum);
                 updatesTemp.push(update);
                 badgeCount += 1;
-                cnsl('Diff found for forum', topicsFromXML[0].forumUrl);
             }
         }
 

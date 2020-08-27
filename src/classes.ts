@@ -1,3 +1,5 @@
+import { cnsl } from "./functions";
+
 /**
  * Classe représentant un forum, avec le minimum d'informations
  * pour la communication entre le background script et les options.
@@ -92,14 +94,19 @@ export class Topic {
      * @param {HTMLElement} element 
      */
     static fromHTML(element): Topic {
-        let id = element.dataset.id;
-        let url = ''; // TODO => Récupérer l'URL du topic dans le futur
+        // cnsl('element reçu de lHTML', element);
+        const idRegex = new RegExp(/forums\/\d+-\d+-(\d+)-/g);
+        const urlFull = element.querySelector('.lien-jv').href;
+        const urlMatchs = urlFull.match(idRegex)[0].split('-');
+
+        let id = urlMatchs[2];
+        let url = urlFull; // TODO => Récupérer l'URL du topic dans le futur
         let subject = element.children[0].innerText;
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
         let date = element.children[3].innerText;
         let innerHTML = element.innerHTML.trim();
-        let forumId = ''; // TODO => Récupérer l'id du forum
+        let forumId = urlMatchs[1];
         let forumUrl = ''
         let forumTitle = '';
 
