@@ -1,6 +1,9 @@
+import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus } from "./functions";
+import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum } from "./classes";
+
 cnsl('Content script loaded at', Date.now());
-let forumInfos = { id: '', isTopForum: false };
-let currentTab;
+let forumInfos: ForumInfos;
+let currentTab; // TODO => Faire une interface pour un objet tab
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
@@ -10,8 +13,6 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
         currentTab = request.currentTab;
         await init(request.currentTab);
     }
-
-    // if (request)
 });
 
 /**
@@ -19,18 +20,19 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
  * Vérification du premier niveau du forum.
  * @param {*} tab - Informations de la tab courante
  */
-async function init(tab) {
+async function init(tab): Promise<void> {
     forumInfos = getForumInformations(tab.url);
 
     if (forumInfos.isTopForum) {
-        const currentTopics = extractTopicsFromHTML();
-        const snapshot = await getLastSnapshot(forumInfos.id);
+        const currentTopics: TopicsAndElements = extractTopicsFromHTML();
+        const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
         if (!snapshot[forumInfos.id]) {
+            // Save Snapshot
             forumSnapshot(forumInfos.id, currentTopics.topics);
         } else {
-            const previousTopics = snapshot[forumInfos.id].topics;
-            const snapshotChanges = searchChanges(previousTopics, currentTopics.topics);
+            const previousTopics: Topic[] = snapshot[forumInfos.id].topics;
+            const snapshotChanges: SnapshotChanges = searchChanges(previousTopics, currentTopics.topics);
             // Update views
             let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
             // Update data in local storage with current
@@ -41,8 +43,8 @@ async function init(tab) {
 
         addFollowButton();
 
-        return new ForumInformations(forumInfos.id, snapshot);
-
+        // // return new ForumInformations(forumInfos.id, snapshot);
+        // return { id: forumInfos.id, snapshot: snapshot, isTopForum: true };
     } else {
         cnsl('Its not a top forum topic');
     }
@@ -50,9 +52,9 @@ async function init(tab) {
 
 /**
  * Extrait l'id d'un forum en fonction de son URL et déduit si c'est bien la première page.
- * @param {String} forumUrl 
+ * @param {string} forumUrl 
  */
-function getForumInformations(forumUrl) {
+function getForumInformations(forumUrl: string): ForumInfos {
     let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
     let matchs = forumUrl.match(regex);
 
@@ -61,19 +63,19 @@ function getForumInformations(forumUrl) {
 
         return { id: forumId, isTopForum: true };
     } else {
-        return { id: 0, isTopForum: false };
+        return { id: null, isTopForum: false };
     }
 }
 
 /**
  * Cherche les topics qui ont été mis à jour.
  */
-function searchChanges(previousTopics, currentTopics) {
+function searchChanges(previousTopics: Topic[], currentTopics: Topic[]): SnapshotChanges {
 
-    let updatedTopics = [];
+    let updatedTopics: Topic[] = [];
 
     // Search updated topics since last visit
-    for (topic of currentTopics) {
+    for (let topic of currentTopics) {
 
         let topicFound = previousTopics.find(t => t.id === topic.id);
 
@@ -95,8 +97,8 @@ function searchChanges(previousTopics, currentTopics) {
     let missingTopicsId = previousTopicsId.filter(x => !currentTopicsId.includes(x));
 
     // Nouveaux topics
-    let newTopics = [];
-    for (id of newTopicsId) {
+    let newTopics: Topic[] = [];
+    for (let id of newTopicsId) {
         let newTopic = currentTopics.find(t => t.id === id);
         newTopic.isReadPending();
         newTopics.push(newTopic);
@@ -105,9 +107,9 @@ function searchChanges(previousTopics, currentTopics) {
     }
 
     // Topics sortis
-    let missingTopics = [];
-    for (id of missingTopicsId) {
-        let missingTopic = previousTopics.find(t => t.id === id);
+    let missingTopics: Topic[] = [];
+    for (let id of missingTopicsId) {
+        let missingTopic = previousTopics.find((t: Topic) => t.id === id);
         missingTopics.push(missingTopic);
     }
 
@@ -118,11 +120,11 @@ function searchChanges(previousTopics, currentTopics) {
  * Extraction des topics sous forme d'élément HTML, et création de leur correspondance en objet `Topic` 
  * @returns { topics: Topic[], elements: HTMLCollection }
  */
-function extractTopicsFromHTML() {
-    const htmlCollection = document.getElementsByClassName('topic-list');
-    const topicsElements = htmlCollection[0].getElementsByTagName('li');
+function extractTopicsFromHTML(): TopicsAndElements {
+    const htmlCollection: HTMLCollection = document.getElementsByClassName('topic-list');
+    const topicsElements: HTMLCollectionOf<HTMLLIElement> = htmlCollection[0].getElementsByTagName('li');
 
-    var topics = [];
+    var topics: Topic[] = [];
     for (var i = 1; i < topicsElements.length; i++) {
         topics.push(Topic.fromHTML(topicsElements[i]));
     }
@@ -132,17 +134,20 @@ function extractTopicsFromHTML() {
 
 /**
  * Permet de sauvegarder les topics d'un forum
- * @param {String} forumId - L'id du forum. Fourni dans l'URL
+ * @param {string} forumId - L'id du forum. Fourni dans l'URL
  * @param {Topic[]} currentTopics - Liste des topics en objet custom
  */
-function forumSnapshot(forumId, currentTopics) {
-    chrome.storage.local.set({
+function forumSnapshot(forumId: string, topics: Topic[]): void {
+    // Create a Snapshot
+    const snapshot: Snapshot = {
         [forumId]: {
             createdTime: Date.now(),
-            topics: currentTopics
+            topics: topics
         }
-    }, () => {
-        cnsl('Data saved', currentTopics);
+    };
+    // Save it
+    chrome.storage.local.set(snapshot, () => {
+        cnsl('Data saved', snapshot);
     })
 }
 
@@ -152,11 +157,11 @@ function forumSnapshot(forumId, currentTopics) {
  * @param {HTMLCollection} topicElements - Les éléments des topics de la page courante
  * @param {Topic[]} updatedTopics - Les topics qui ont du nouveau contenu, et qu'il faut mettre en surbrillance
  */
-function injectUpdatedElement(topicElements, updatedTopics) {
+function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
 
-    let elements = [];
-    for (topic of updatedTopics) {
-        for (el of topicElements) {
+    let elements: HTMLLIElement[] = [];
+    for (let topic of updatedTopics) {
+        for (let el of topicElements) {
             if (el.dataset.id === topic.id) {
                 el.innerHTML = topic.innerHTML;
                 el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
@@ -171,12 +176,12 @@ function injectUpdatedElement(topicElements, updatedTopics) {
 
 /**
  * Applique un clic listener sur chaque topic en attente de lecture.
- * @param {String} forumId 
+ * @param {string} forumId 
  * @param {HTMLElement} elements 
  */
 async function watchUnreadTopics(forumId, elements) {
 
-    for (i = 0; i < elements.length; i++) {
+    for (let i = 0; i < elements.length; i++) {
         (function (index) {
             let el = elements[index];
             el.addEventListener('click', async function () {
@@ -196,15 +201,15 @@ async function watchUnreadTopics(forumId, elements) {
 
 /**
  * Permet de mettre à jour le snapshot.
- * @param {String} forumId - Id du forum -> URL
+ * @param {string} forumId - Id du forum -> URL
  * @param {*} snapshot -> Les données du forum de la visite précédente
  * @param {SnapshotChanges} snapshotChanges - Les changements à répercuter sur le snapshot actuel
  */
-async function updateSnapshot(forumId, snapshot, snapshotChanges) {
+async function updateSnapshot(forumId: string, snapshot: Snapshot, snapshotChanges: SnapshotChanges): Promise<Snapshot> {
 
     // Remove deleted topics
     if (snapshotChanges.deleted.length > 0) {
-        for (topic of snapshotChanges.deleted) {
+        for (let topic of snapshotChanges.deleted) {
             let index = snapshot[forumId].topics.findIndex(t => t.id === topic.id);
             snapshot[forumId].topics.splice(index, index >= 0 ? 1 : 0);
         }
@@ -212,22 +217,14 @@ async function updateSnapshot(forumId, snapshot, snapshotChanges) {
 
     // Add added topics
     if (snapshotChanges.added.length > 0) {
-        for (topic of snapshotChanges.added) {
+        for (let topic of snapshotChanges.added) {
             snapshot[forumId].topics.push(topic);
         }
     }
 
-    await forumSnapshot(forumId, snapshot[forumId].topics);
+    forumSnapshot(forumId, snapshot[forumId].topics);
 
     return snapshot;
-}
-
-class SnapshotChanges {
-    constructor(updated, added, deleted) {
-        this.updated = updated;
-        this.added = added;
-        this.deleted = deleted;
-    }
 }
 
 async function addFollowButton() {
@@ -241,13 +238,13 @@ async function addFollowButton() {
  * Vérifie si le forum est déjà suivi, ou non.
  * @return {boolean}
  */
-async function isFollowedForum() {
+async function isFollowedForum(): Promise<boolean> {
     const follows = await getFollowedForums();
-    const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+    const rssLink = (document.getElementsByClassName('picto-rss')[0] as HTMLLinkElement).href;
 
     if (follows['followedForums']) {
         // Map() all RSS links
-        const rssURLs = follows.followedForums.map(forum => forum.rssUrl);
+        const rssURLs = follows.followedForums.map((forum: Forum) => forum.rssUrl);
         let isFollowed = rssURLs.includes(rssLink);
         return isFollowed;
     }
@@ -259,7 +256,7 @@ async function isFollowedForum() {
  * Création du bouton pour suivre un forum
  * @param {boolean} isForumFollowed - Etat du bouton en fonction du statut de suivi
  */
-function createButton(isForumFollowed) {
+function createButton(isForumFollowed: boolean): HTMLDivElement {
     // Récupération du bloc header
     // /!\ Il y a 2 header-bloc
     let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
@@ -279,7 +276,7 @@ function createButton(isForumFollowed) {
     return followBtn;
 }
 
-function updateFollowButtonUI(followBtn, isForumFollowed) {
+function updateFollowButtonUI(followBtn: HTMLDivElement, isForumFollowed: boolean) {
     if (isForumFollowed) {
         followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivi</button></a>';
     } else {
@@ -291,11 +288,11 @@ function updateFollowButtonUI(followBtn, isForumFollowed) {
  * Ajoute un listener de clic sur le bouton "Suivre"
  * @param {HTMLElement} followBtn 
  */
-function addLiveButtonListener(followBtn) {
+function addLiveButtonListener(followBtn: HTMLDivElement): void {
 
     followBtn.addEventListener('click', async () => {
         // Récupération du lien RSS du forum
-        const rssLink = document.getElementsByClassName('picto-rss')[0].href;
+        const rssLink = (document.getElementsByClassName('picto-rss')[0] as HTMLLinkElement).href;
         // Vérifie si le forum actuel est suivi, ou non
         let isFollowed = await isFollowedForum();
         // Update button
@@ -308,8 +305,8 @@ function addLiveButtonListener(followBtn) {
         }
 
         if (isFollowed) {
-            const links = follows.followedForums.map(forum => forum.rssUrl);
-            let idx = links.findIndex(link => link === rssLink);
+            const links = follows.followedForums.map((forum: Forum) => forum.rssUrl);
+            let idx = links.findIndex((link: string) => link === rssLink);
             // On supprime le forum du suivi
             follows.followedForums.splice(idx, 1);
         } else {
@@ -317,13 +314,7 @@ function addLiveButtonListener(followBtn) {
             follows.followedForums.push(newFollowedForum);
         }
         // Update snapshot
-        updateFollowStatus(follows.followedForums);
+        updateFollowStatus({ followedForums: follows.followedForums});
     });
 }
 
-class ForumInformations {
-    constructor(forumId, snapshot) {
-        this.forumId = forumId;
-        this.snapshot = snapshot;
-    }
-}

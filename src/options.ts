@@ -1,3 +1,6 @@
+import { getFollowedForums, updateFollowStatus, cnsl } from "./functions";
+import { Forum } from "./classes";
+
 window.onload = async function () {
     createForumsList();
 };
@@ -5,11 +8,12 @@ window.onload = async function () {
 const body = document.getElementsByTagName('body')[0];
 
 body.addEventListener('click', event => {
-    if (!event.target.classList.contains('btn-remove')) {
+    const el = (event.target as Element);
+    if (!el.classList.contains('btn-remove')) {
         return;
     }
 
-    removeForumSubscription(event.target.id);
+    removeForumSubscription(el.id);
 });
 
 // Get HTML Elements
@@ -17,13 +21,13 @@ const list = document.getElementsByClassName('forum-urls')[0];
 
 // -- Functions
 
-async function createForumsList() {
+async function createForumsList(): Promise<void> {
     const data = await getFollowedForums();
     const followedForums = data.followedForums;
     // Nettoyage de l'UI
     list.innerHTML = '';
 
-    for (forum of followedForums) {
+    for (let forum of followedForums) {
         // Element de la liste
         const li = document.createElement('li');
         // Lien
@@ -46,7 +50,7 @@ async function createForumsList() {
     }
 }
 
-async function removeForumSubscription(forumUrl) {
+async function removeForumSubscription(forumUrl): Promise<void> {
     // Récupérer les forums encore une fois.
     // L'utilisateur peut avoir suivi / supprimer d'autres forums entre temps
     const data = await getFollowedForums();
@@ -54,18 +58,18 @@ async function removeForumSubscription(forumUrl) {
     const urls = data.followedForums.map(forum => forum.url);
     const idx = urls.findIndex(url => url === forumUrl);
     // Get id
-    const forum = Forum.fromObject(data.followedForums[idx]);
+    const forum = Forum.fromObject(data.followedForums[idx]); // TODO => Update ça avec le vrai objet
 
     data.followedForums.splice(idx, 1);
 
-    updateFollowStatus(data.followedForums);
+    updateFollowStatus({ followedForums: data.followedForums});
     // Refresh UI
     createForumsList();
     // Supprimer le snapshot du forum
     deleteForumSnapshot(forum.getId());
 }
 
-function deleteForumSnapshot(forumId) {
+function deleteForumSnapshot(forumId: string) {
     chrome.storage.local.remove(forumId, () => {
         cnsl(`Forum ${forumId} snapshot deleted`);
     });
