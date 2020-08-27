@@ -209,3 +209,7 @@ export class SnapshotChanges {
         this.deleted = deleted;
     }
 }
+
+export interface UpdateBackup {
+    updates: Update[];
+}

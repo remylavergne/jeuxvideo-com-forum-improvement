@@ -1,6 +1,6 @@
-import { ForumsFollowed, Snapshot } from "./classes";
+import { ForumsFollowed, Snapshot, Update, UpdateBackup } from "./classes";
 
-const debug = false; // TODO => export into global configuration
+const debug = true; // TODO => export into global configuration
 
 /**
  * Met à jour la liste des forums suivis par l'utilisateur
@@ -11,6 +11,22 @@ export function updateFollowStatus(followedForums: ForumsFollowed): void {
         cnsl('JV Live => Liste de forum(s) suivi(s)', followedForums);
     })
 }
+
+export function backupUpdates(updateBackup: UpdateBackup): void {
+    chrome.storage.local.set(updateBackup, () => {
+        cnsl('JV Live => Updates sauvegardées', updateBackup);
+    })
+}
+
+export function getUpdates(): Promise<UpdateBackup> {
+    return new Promise<UpdateBackup>(function (resolve, reject) {
+        chrome.storage.local.get('updates', function (result: UpdateBackup) {
+            resolve(result);
+        });
+    });
+}
+
+
 
 /**
  * Récupère les informations de la dernière visite du forum.

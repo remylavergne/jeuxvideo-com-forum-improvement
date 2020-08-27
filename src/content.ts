@@ -15,6 +15,8 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
+// TODO => Faire une méthode de vérification aléatoire pour savoir si le background job tourne toujours
+
 /**
  * Initialise les méthodes pour la page actuelle.
  * Vérification du premier niveau du forum.
@@ -315,6 +317,11 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
         }
         // Update snapshot
         updateFollowStatus({ followedForums: follows.followedForums});
+
+        // Ask to start background check
+        chrome.runtime.sendMessage({ startBackgroundNotifications: true }, (response) => {
+            cnsl(response);
+        })
     });
 }
 

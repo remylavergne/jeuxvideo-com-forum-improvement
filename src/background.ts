@@ -1,23 +1,30 @@
-import { cnsl, getFollowedForums, getLastSnapshot } from "./functions";
+import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates } from "./functions";
 import { ForumsFollowed, Topic, Snapshot, Update } from "./classes";
 
 /**
  * Variables
  */
-let updates = [];
+
 cnsl('Background script loaded at', Date.now());
+
 /**
  * Chrome API
  */
 
+chrome.runtime.onInstalled.addListener(() => {
+    chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
+    updateBadge(0);
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm && alarm.name === 'backgroundNotifications') {
+        checkFollowedForumsUpdate();
+    }
+});
+   
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "requestCurrentTab") {
         sendTabToContentScripts(sender);
-    }
-
-    if (request.popup = 'doYouHaveUpdates') {
-        cnsl('Popup asks for updates');
-        chrome.runtime.sendMessage({ updates: updates });
     }
 });
 
@@ -31,7 +38,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 async function checkFollowedForumsUpdate() {
     const forums: ForumsFollowed = await getFollowedForums();
 
-    const updatesTemp = [];
+    const updatesTemp: Update[] = [];
     if (forums.followedForums && forums.followedForums.length > 0) {
 
         let badgeCount = 0;
@@ -78,8 +85,7 @@ async function checkFollowedForumsUpdate() {
         cnsl('Aucun forum suivi', {});
     }
 
-    // Update instance -> Utiliser par la Popup
-    updates = updatesTemp;
+    backupUpdates({ updates: updatesTemp });
 }
 
 /**
@@ -140,8 +146,3 @@ async function getTopics(rssLink: string): Promise<Topic[]> {
         request.send();
     });
 }
-
-/**
- * Démarrage de la vérification des mises à jour des forums.
- */
-setInterval(checkFollowedForumsUpdate, 120000);
