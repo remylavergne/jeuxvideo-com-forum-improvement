@@ -1,4 +1,4 @@
-import { ForumsFollowed, Snapshot, Update, UpdateBackup } from "./classes";
+import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration } from "./classes";
 
 const debug = true; // TODO => export into global configuration
 
@@ -49,6 +49,20 @@ export async function getFollowedForums(): Promise<ForumsFollowed> {
             resolve(result);
         });
     });
+}
+
+export async function getGlobalConfiguration(): Promise<GlobalConfiguration> {
+    return new Promise(function (resolve, reject) {
+        chrome.storage.local.get('globalConfig', function (result: GlobalConfiguration) {
+            resolve(result);
+        });
+    });
+}
+
+export function setGlobalConfiguration(globalConfig: GlobalConfiguration): void {
+    chrome.storage.local.set(globalConfig, () => {
+        cnsl('JV Live => Configuration sauvegardées', globalConfig);
+    })
 }
 
 /**

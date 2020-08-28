@@ -1,8 +1,11 @@
-import { getFollowedForums, updateFollowStatus, cnsl } from "./functions";
-import { Forum } from "./classes";
+import { getFollowedForums, updateFollowStatus, cnsl, getGlobalConfiguration } from "./functions";
+import { Forum, GlobalConfiguration } from "./classes";
 
 window.onload = async function () {
     createForumsList();
+    getGlobalConfiguration().then((globalConfig: GlobalConfiguration) => {
+        displayCurrentConfiguration(globalConfig);
+    });
 };
 
 const body = document.getElementsByTagName('body')[0];
@@ -69,8 +72,12 @@ async function removeForumSubscription(forumUrl): Promise<void> {
     deleteForumSnapshot(forum.getId());
 }
 
-function deleteForumSnapshot(forumId: string) {
+function deleteForumSnapshot(forumId: string) { // TODO => Export
     chrome.storage.local.remove(forumId, () => {
         cnsl(`Forum ${forumId} snapshot deleted`);
     });
+}
+
+function displayCurrentConfiguration(config: GlobalConfiguration) {
+    
 }

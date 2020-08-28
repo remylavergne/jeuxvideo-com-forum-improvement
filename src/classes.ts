@@ -213,3 +213,15 @@ export class SnapshotChanges {
 export interface UpdateBackup {
     updates: Update[];
 }
+
+export interface GlobalConfiguration {
+    globalConfig: Config
+}
+
+export interface Config {
+    topic: TopicConfig;
+}
+
+export interface TopicConfig {
+    previsu: boolean;
+}
