@@ -27,7 +27,7 @@
     "content_scripts": [
         {
             "matches": ["https://www.jeuxvideo.com/forums/*"],
-            "js": ["js/classes.js", "js/functions.js", "js/content.js", "js/content-topic-config"],
+            "js": ["js/classes.js", "js/objects.js", "js/functions.js", "js/content.js", "js/contenttopicconfig.js"],
             "css": ["css/content.css"]
         }
     ]

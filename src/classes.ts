@@ -1,5 +1,35 @@
 import { cnsl } from "./functions";
 
+
+export interface ChromeTab {
+    frameId: number,
+    id: string,
+    origin: string,
+    tab: Tab,
+    url: string
+}
+
+export interface Tab {
+    active: boolean,
+    audible: boolean,
+    autoDiscardable: boolean,
+    discarded: boolean,
+    favIconUrl: string,
+    height: number,
+    highlighted: boolean,
+    id: number,
+    incognito: boolean,
+    index: number,
+    mutedInfo: {muted: boolean},
+    openerTabId: number,
+    pinned: boolean,
+    selected: boolean,
+    status: string,
+    title: string,
+    url: string,
+    width: number,
+    windowId: number
+}
 /**
  * Classe représentant un forum, avec le minimum d'informations
  * pour la communication entre le background script et les options.

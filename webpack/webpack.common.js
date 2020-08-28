@@ -10,7 +10,9 @@ module.exports = {
         background: path.join(__dirname, srcDir + 'background.ts'),
         content: path.join(__dirname, srcDir + 'content.ts'),
         classes: path.join(__dirname, srcDir + 'classes.ts'),
-        functions: path.join(__dirname, srcDir + 'functions.ts')
+        functions: path.join(__dirname, srcDir + 'functions.ts'),
+        contenttopicconfig: path.join(__dirname, srcDir + 'contenttopicconfig.ts'),
+        objects: path.join(__dirname, srcDir + 'objects.ts')
     },
     output: {
         path: path.join(__dirname, '../dist/js'),

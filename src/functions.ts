@@ -1,6 +1,23 @@
-import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration } from "./classes";
+import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration, ForumInfos } from "./classes";
 
 const debug = true; // TODO => export into global configuration
+
+/**
+ * Extrait l'id d'un forum en fonction de son URL et déduit si c'est bien la première page.
+ * @param {string} forumUrl 
+ */
+export function getForumInformations(forumUrl: string): ForumInfos {
+    let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
+    let matchs = forumUrl.match(regex);
+
+    if (matchs && matchs.length > 0) {
+        const forumId = matchs[0].split("-")[1];
+
+        return { id: forumId, isTopForum: true };
+    } else {
+        return { id: null, isTopForum: false };
+    }
+}
 
 /**
  * Met à jour la liste des forums suivis par l'utilisateur
