@@ -6,7 +6,10 @@ C'est la première version de l'extension. Celle-ci, si utilisée, évoluera en 
 
 ![](./resources/jv-forum-refresh-example.gif)
 
-## ⬇️ Installation
+## 🌎 Installation depuis le Chrome Store
+<a href="https://chrome.google.com/webstore/detail/jv-live/okldoknjbjfcmcjhjgcbhfpjefheckcd?hl=fr&authuser=0" rel="nofollow" title="JV Live - Store Chrome"><img src="./resources/chrome_128x128.png" width="48" style="max-width:100%;"></a>
+
+## ⬇️ Installation locale
 
 Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous pouvez quand même l'installer.
 
