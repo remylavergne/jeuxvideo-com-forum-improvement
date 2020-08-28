@@ -218,6 +218,9 @@ export interface GlobalConfiguration {
     globalConfig: Config
 }
 
+export interface DefaultGlobalConfiguration {
+    globalConfig: Config
+}
 export interface Config {
     topic: TopicConfig;
 }

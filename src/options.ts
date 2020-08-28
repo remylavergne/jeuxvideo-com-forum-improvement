@@ -1,11 +1,16 @@
-import { getFollowedForums, updateFollowStatus, cnsl, getGlobalConfiguration } from "./functions";
-import { Forum, GlobalConfiguration } from "./classes";
+import { getFollowedForums, updateFollowStatus, cnsl, getGlobalConfiguration, setGlobalConfiguration } from "./functions";
+import { Forum, GlobalConfiguration, TopicConfig } from "./classes";
 
 window.onload = async function () {
     createForumsList();
-    getGlobalConfiguration().then((globalConfig: GlobalConfiguration) => {
+
+    // DEV
+    // setGlobalConfiguration({ globalConfig: { topic: { previsu: true}}});
+
+    getGlobalConfiguration()
+    .then((globalConfig: GlobalConfiguration) => {
         displayCurrentConfiguration(globalConfig);
-    });
+    }).catch(e => cnsl('Erreur à la récupération de la config', e));
 };
 
 const body = document.getElementsByTagName('body')[0];
@@ -18,6 +23,9 @@ body.addEventListener('click', event => {
 
     removeForumSubscription(el.id);
 });
+
+// TODO => a l'installation appliquer une configuration de base
+// TODO => A l'update vérifier si config existante, sinon, la créer
 
 // Get HTML Elements
 const list = document.getElementsByClassName('forum-urls')[0];
@@ -79,5 +87,18 @@ function deleteForumSnapshot(forumId: string) { // TODO => Export
 }
 
 function displayCurrentConfiguration(config: GlobalConfiguration) {
-    
+        setMessagePrev(config);
+}
+
+// Default value === true
+function setMessagePrev(config: GlobalConfiguration): void {
+    const messagePrevSwitch = (document.getElementById('option-prev') as HTMLInputElement);
+    messagePrevSwitch.checked = config.globalConfig.topic.previsu;
+    // Listener
+    messagePrevSwitch.addEventListener('input', function(event) {
+        // Update config
+        config.globalConfig.topic.previsu = messagePrevSwitch.checked;
+        // Save it
+        setGlobalConfiguration(config);
+    });
 }
