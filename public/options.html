@@ -1,26 +1,47 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-        <title>[JV Live - Options]</title>
-        <link rel="stylesheet" type="text/css" href="css/options-style.css">
-    </head>
-    <body>
-        <div class="header-container">
-            <div class="vertical-center">
-                <span class="title-first">Option</span><span class="title-second">s</span>
-            </div>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>[JV Live - Options]</title>
+    <link rel="stylesheet" type="text/css" href="css/options-style.css">
+</head>
+
+<body>
+    <div class="header-container">
+        <div class="vertical-center">
+            <span class="title-first">Option</span><span class="title-second">s</span>
         </div>
-        
-        <div class="section-content">
-            <h3 class="section-title">🚀 Forum(s) que vous suivez</h3>
-            <ul class="forum-urls"></ul>
+    </div>
+
+    <!-- Forums followed -->
+    <div class="section-content">
+        <h3 class="section-title">🚀 Forum(s) que vous suivez</h3>
+        <ul class="forum-urls"></ul>
+    </div>
+    <!-- Topic options -->
+    <div class="section-content">
+        <h3 class="section-title">🔝 Options des topics</h3>
+        <!-- Rounded switch -->
+        <div class="section-element">
+            <label class="switch">
+                <input type="checkbox" id="option-prev">
+                <span class="slider round"></span>
+            </label>
+            <span class="options-text">Prévisualisation des messages</span>
         </div>
 
+        <!-- <label class="switch">
+            <input type="checkbox">
+            <span class="slider round"></span>
+        </label>
+        <span>Empêcher le clipping de la pub en entête</span> -->
+    </div>
 
 
-        <script src="js/classes.js"></script>
-        <script src="js/functions.js"></script>
-        <script src="js/options.js"></script>
-    </body>
+    <script src="js/classes.js"></script>
+    <script src="js/functions.js"></script>
+    <script src="js/options.js"></script>
+</body>
+
 </html>

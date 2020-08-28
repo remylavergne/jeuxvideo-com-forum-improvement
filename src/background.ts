@@ -1,5 +1,8 @@
-import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates } from "./functions";
-import { ForumsFollowed, Topic, Snapshot, Update } from "./classes";
+import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates, setGlobalConfiguration, getGlobalConfiguration } from "./functions";
+import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, DefaultGlobalConfiguration } from "./classes";
+import { defaultConfig } from "./objects";
+
+// TODO => Changer la couleur du badge si une nouvelle mise à jour, après une mise à jour. Et remettre la couleur par défaut au clic.
 
 /**
  * Variables
@@ -11,9 +14,11 @@ cnsl('Background script loaded at', Date.now());
  * Chrome API
  */
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
     chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
     updateBadge(0);
+    cnsl('Détails à l\'installation', details);
+    setDefaultGlobalConfiguration();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -23,10 +28,26 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 });
    
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.contentScripts === "requestCurrentTab") {
+    if (request.contentScripts === "content") {
         sendTabToContentScripts(sender);
     }
+
+    if (request.contentScripts === "topic-config") {
+        chrome.tabs.sendMessage(sender.tab.id, { contentTopicConfig: sender });
+    }
+
 });
+
+/**
+ * Initialise une configuration par défaut des options.
+ */
+function setDefaultGlobalConfiguration(): void {
+    getGlobalConfiguration().then((config: GlobalConfiguration) => {
+        if (!config.globalConfig) {
+            setGlobalConfiguration(defaultConfig);
+        }
+    })
+}
 
 /**
  * Vérifie pour chaque forum suivi, si du contenu est disponible.

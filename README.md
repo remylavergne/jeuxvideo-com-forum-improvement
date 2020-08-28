@@ -6,9 +6,10 @@ C'est la première version de l'extension. Celle-ci, si utilisée, évoluera en 
 
 ![](./resources/jv-forum-refresh-example.gif)
 
-## ⬇️ Installation
+## 🌎 Installation depuis le Chrome Store
+<a href="https://chrome.google.com/webstore/detail/jv-live/okldoknjbjfcmcjhjgcbhfpjefheckcd?hl=fr&authuser=0" rel="nofollow" title="JV Live - Store Chrome"><img src="./resources/chrome_128x128.png" width="48" style="max-width:100%;"></a>
 
-Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous pouvez quand même l'installer.
+## ⬇️ Installation locale
 
 - Télécharger la [dernière version disponible](https://github.com/remylavergne/jeuxvideo-com-forum-improvement/releases)
 - Et suivre ce tutoriel pour [installer une extension Chrome](https://developer.chrome.com/extensions/getstarted)
@@ -17,7 +18,7 @@ Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous 
 
 -> Les forums que vous visitez sont mis en cache. Lors de votre prochaine visite, les topics que vous n'avez pas lu, ou vu, seront affichés en bleu (statut non lu classique)
 
--> Un bouton s'affiche sur tous les forums. Ce dernier vous permet de vous abonner aux forums de votre choix, et ainsi de suivre toutes leurs mises à jour.
+-> Un bouton s'affiche sur la première page de tous les forums. Ce dernier vous permet de vous abonner aux forums de votre choix, et ainsi de suivre toutes leurs mises à jour.
 Même lorsque vous ne naviguez pas sur le site, l'extension vérifie périodiquement *(~ 2 minutes)* si du nouveau contenu est disponible.
 Si c'est le cas, une notification, et un raccourci s'afficheront sur l'icône de l'extension.
 
@@ -33,7 +34,7 @@ Si c'est le cas, une notification, et un raccourci s'afficheront sur l'icône de
 
 ![](resources/update-links.png)
 
--> Gestion des forums que vous suivez. Vous avez une vu globale et vous pouvez choisir de ne plus suivre un forum d'un simple clic.
+-> Gestion des forums que vous suivez, ainsi que des options. Vous avez une vu globale et vous pouvez choisir de ne plus suivre un forum d'un simple clic.
 
 ![](resources/options-forums.png)
 
