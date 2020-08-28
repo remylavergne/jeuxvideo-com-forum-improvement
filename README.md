@@ -11,8 +11,6 @@ C'est la première version de l'extension. Celle-ci, si utilisée, évoluera en 
 
 ## ⬇️ Installation locale
 
-Pour l'instant, l'extension n'est pas disponible sur le Store Chrome. Mais vous pouvez quand même l'installer.
-
 - Télécharger la [dernière version disponible](https://github.com/remylavergne/jeuxvideo-com-forum-improvement/releases)
 - Et suivre ce tutoriel pour [installer une extension Chrome](https://developer.chrome.com/extensions/getstarted)
 
