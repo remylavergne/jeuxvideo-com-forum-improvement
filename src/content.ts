@@ -1,4 +1,4 @@
-import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount } from "./functions";
+import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount, forumSnapshot } from "./functions";
 import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup } from "./classes";
 
 cnsl('Content script loaded at', Date.now());
@@ -112,24 +112,7 @@ function extractTopicsFromHTML(): TopicsAndElements {
     return { topics: topics, elements: topicsElements };
 }
 
-/**
- * Permet de sauvegarder les topics d'un forum
- * @param {string} forumId - L'id du forum. Fourni dans l'URL
- * @param {Topic[]} currentTopics - Liste des topics en objet custom
- */
-function forumSnapshot(forumId: string, topics: Topic[]): void {
-    // Create a Snapshot
-    const snapshot: Snapshot = {
-        [forumId]: {
-            createdTime: Date.now(),
-            topics: topics
-        }
-    };
-    // Save it
-    chrome.storage.local.set(snapshot, () => {
-        cnsl('Data saved', snapshot);
-    })
-}
+
 
 /**
  * Update visuellement les topics qui ont été mis à jour par rapport à la dernière visite

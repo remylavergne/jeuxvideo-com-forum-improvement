@@ -130,7 +130,7 @@ export class Topic {
         const urlMatchs = urlFull.match(idRegex)[0].split('-');
 
         let id = urlMatchs[2];
-        let url = urlFull; // TODO => Récupérer l'URL du topic dans le futur
+        let url = urlFull;
         let subject = element.children[0].innerText;
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
@@ -223,8 +223,10 @@ export interface SnapshotTopics {
 
 export interface ForumInfos {
     id?: string;
+    topicId?: string;
     isTopForum: boolean;
     snapshot?: Snapshot;
+    url: string;
 }
 
 export interface TopicsAndElements {
