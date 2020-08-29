@@ -98,8 +98,12 @@ export function setGlobalConfiguration(globalConfig: GlobalConfiguration): void 
  */
 export function getCurrentDateAndTime(): string {
     var today = new Date();
+    let minutes = today.getMinutes().toString();
+    if (Number(minutes) < 10) {
+        minutes = "0" + minutes;
+    }
     var date = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear()
-    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+    var time = today.getHours() + ":" + minutes + ":" + today.getSeconds();
     return time + ' ' + date;
 }
 
