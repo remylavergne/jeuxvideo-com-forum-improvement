@@ -2,9 +2,12 @@
  * Applique la configuration de l'utilisateur à la partie topic / message
  */
 
-import { cnsl, getForumInformations, getGlobalConfiguration, getLastSnapshot, forumSnapshot } from "./functions";
+import { cnsl, getForumInformations, getGlobalConfiguration } from "./functions";
 import { defaultConfig } from "./objects";
-import { TopicConfig, GlobalConfiguration, Snapshot, ForumInfos, Topic } from "./classes";
+import { TopicConfig, GlobalConfiguration, ForumInfos } from "./classes";
+
+// Disable call twice or more
+let alreadyPost = false;
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "topic-config" });
@@ -73,7 +76,8 @@ function listenReplyButton(forumInfos: ForumInfos): void {
     const replyButton = document.getElementsByClassName('btn btn-poster-msg datalayer-push js-post-message')[0];
 
     replyButton.addEventListener('click', (event) => {
-        if (textArea.value) {
+        if (textArea.value && !alreadyPost) {
+            alreadyPost = true;
             chrome.runtime.sendMessage({ userReplyTo: forumInfos });
         }
     })

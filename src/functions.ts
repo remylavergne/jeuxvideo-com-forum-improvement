@@ -1,4 +1,4 @@
-import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration, ForumInfos, Topic } from "./classes";
+import { ForumsFollowed, Snapshot, UpdateBackup, GlobalConfiguration, ForumInfos, Topic } from "./classes";
 
 const debug = true; // TODO => export into global configuration
 
