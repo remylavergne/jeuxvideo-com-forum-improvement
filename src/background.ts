@@ -16,7 +16,7 @@ cnsl('Background script loaded at', Date.now());
 
 chrome.runtime.onInstalled.addListener((details) => {
     chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
-    updateBadge(0);
+    updateBadge("0");
     cnsl('Détails à l\'installation', details);
     setDefaultGlobalConfiguration();
 });
@@ -34,6 +34,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
     if (request.contentScripts === "topic-config") {
         chrome.tabs.sendMessage(sender.tab.id, { contentTopicConfig: sender });
+    }
+
+    if (request.updateBadge) {
+        cnsl('Count du badge reçu', request.updateBadge);
+        updateBadge(request.updateBadge);
     }
 
 });
@@ -101,7 +106,7 @@ async function checkFollowedForumsUpdate() {
         }
 
         // Update Popup informations
-        updateBadge(badgeCount);
+        updateBadge(badgeCount.toString());
     } else {
         cnsl('Aucun forum suivi');
     }
@@ -113,8 +118,8 @@ async function checkFollowedForumsUpdate() {
  * Mise à jour du nombre de forum mis à jour sur le badge de l'extension
  * @param {number} number - Nombre de forum mis à jour
  */
-function updateBadge(number: number): void {
-    chrome.browserAction.setBadgeText({ text: number.toString() });
+function updateBadge(number: string): void {
+    chrome.browserAction.setBadgeText({ text: number });
 }
 
 /**
