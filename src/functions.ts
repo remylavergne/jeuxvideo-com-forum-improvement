@@ -1,4 +1,4 @@
-import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration, ForumInfos } from "./classes";
+import { ForumsFollowed, Snapshot, Update, UpdateBackup, GlobalConfiguration, ForumInfos, Topic } from "./classes";
 
 const debug = true; // TODO => export into global configuration
 
@@ -6,17 +6,41 @@ const debug = true; // TODO => export into global configuration
  * Extrait l'id d'un forum en fonction de son URL et déduit si c'est bien la première page.
  * @param {string} forumUrl 
  */
-export function getForumInformations(forumUrl: string): ForumInfos {
+export function getForumInformations(forumUrl: string): ForumInfos { // TODO: Refactor logique
     let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
     let matchs = forumUrl.match(regex);
 
     if (matchs && matchs.length > 0) {
+        // Top forum
         const forumId = matchs[0].split("-")[1];
-
-        return { id: forumId, isTopForum: true };
+        return { id: forumId, isTopForum: true, url: forumUrl };
     } else {
-        return { id: null, isTopForum: false };
+        // Topic
+        const topicRegex = new RegExp(/forums\/\d+-\d+-\d+-/g);
+        const matchs =forumUrl.match(topicRegex)[0].split('-');
+        const forumId = matchs[1];
+        const topicId = matchs[2];
+        return { id: forumId, isTopForum: false, url: forumUrl, topicId: topicId };
     }
+}
+
+/**
+* Permet de sauvegarder les topics d'un forum
+* @param {string} forumId - L'id du forum. Fourni dans l'URL
+* @param {Topic[]} currentTopics - Liste des topics en objet custom
+*/
+export function forumSnapshot(forumId: string, topics: Topic[]): void {
+   // Create a Snapshot
+   const snapshot: Snapshot = {
+       [forumId]: {
+           createdTime: Date.now(),
+           topics: topics
+       }
+   };
+   // Save it
+   chrome.storage.local.set(snapshot, () => {
+       cnsl('Snapshot sauvegardé', snapshot);
+   })
 }
 
 /**
@@ -114,6 +138,6 @@ export function getCurrentDateAndTime(): string {
  */
 export function cnsl(text: string, data: any = '') {
     if (debug) {
-        console.log(text, data);
+        console.log('JV Live => ' + text, data);
     }
 }

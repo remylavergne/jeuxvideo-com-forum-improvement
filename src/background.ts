@@ -1,5 +1,5 @@
-import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates, setGlobalConfiguration, getGlobalConfiguration } from "./functions";
-import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, DefaultGlobalConfiguration } from "./classes";
+import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates, setGlobalConfiguration, getGlobalConfiguration, forumSnapshot } from "./functions";
+import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, DefaultGlobalConfiguration, ForumInfos } from "./classes";
 import { defaultConfig } from "./objects";
 
 // TODO => Changer la couleur du badge si une nouvelle mise à jour, après une mise à jour. Et remettre la couleur par défaut au clic.
@@ -26,7 +26,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         checkFollowedForumsUpdate();
     }
 });
-   
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.contentScripts === "content") {
         sendTabToContentScripts(sender);
@@ -41,6 +41,27 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         updateBadge(request.updateBadge);
     }
 
+    if (request.userReplyTo) {
+        const forumInfos: ForumInfos = request.userReplyTo;
+
+        getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+            try {
+                let topics = snapshot[forumInfos.id].topics;
+                const topic = topics.find((topic: Topic) => topic.id === forumInfos.topicId);
+                // Le forum n'est pas forcément enregistré (accès au forum via un lien direct vers le message).
+                // Donc, il n'y a pas de sauvegarde à modifier !
+                if (topic) {
+                    let tempCount = topic.count;
+                    tempCount = '' + (Number(tempCount) + 1);
+                    topics.find((topic: Topic) => topic.id === forumInfos.topicId).count = tempCount;
+                    // On sauvegarde la modification
+                    forumSnapshot(forumInfos.id, topics);
+                }
+            } catch (e) {
+                cnsl('Erreur à l\'incrémentation du nombre de message', e);
+            }
+        });
+    }
 });
 
 /**
