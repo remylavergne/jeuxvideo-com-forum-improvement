@@ -220,9 +220,11 @@ function checkUpdateBackup(): void {
         if (updateBackup.updates.length > 0) {
             const idx = updateBackup.updates.map(u => u.forumUrl).findIndex(url => url === currentTab.url);
             cnsl('Index dans les update du forum', idx);
-            updateBackup.updates.splice(idx, 1);
-            backupUpdates(updateBackup);
-            updateBadgeCount(updateBackup.updates.length.toString());
+            if (idx >= 0) {
+                updateBackup.updates.splice(idx, 1);
+                backupUpdates(updateBackup);
+                updateBadgeCount(updateBackup.updates.length.toString());
+            }
         }
     });
 }
