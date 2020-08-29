@@ -68,7 +68,7 @@ async function applyConfiguration(config: TopicConfig, diffs: ConfigDiffs[]) {
 
 /**
  * Si l'utilisateur répond à un topic d'un forum,
- * le compte est mis à jour directement pour qu'il n'y est pas de faux-positifs lors de la recherche de mise à jour.
+ * le compte est mis à jour directement pour qu'il n'y ait pas de faux-positifs lors de la recherche de mise à jour.
  * @param forumInfos - Informations basiques du forum courant
  */
 function listenReplyButton(forumInfos: ForumInfos): void {
