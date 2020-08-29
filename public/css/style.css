@@ -7,6 +7,11 @@ body {
   padding: 0;
 }
 
+footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .header-container {
   height: 30px;
   background-color: #004365;
@@ -43,7 +48,7 @@ ul {
 }
 
 li {
-    margin-bottom: 5px;
+  margin-bottom: 5px;
 }
 
 h2 {
@@ -68,4 +73,13 @@ a:hover {
 /* selected link */
 a:active {
   color: #006bd7;
+}
+
+.update-date-container {
+  margin: 4px;
+}
+
+#footer-date {
+  font-size: smaller;
+  color: grey;
 }

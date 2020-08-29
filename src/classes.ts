@@ -1,4 +1,4 @@
-import { cnsl } from "./functions";
+import { getCurrentDateAndTime } from "./functions";
 
 
 export interface ChromeTab {
@@ -188,6 +188,8 @@ export class Update {
     switchedForums: number;
     updatedTopics: number;
     forum: Forum;
+    time: number;
+    date: string;
 
     /**
      * Informations liées à une mise à jour d'un forum
@@ -205,6 +207,8 @@ export class Update {
         this.switchedForums = switchedForums;
         this.updatedTopics = updatedTopics;
         this.forum = forum;
+        this.time = Date.now();
+        this.date = getCurrentDateAndTime();
     }
 }
 

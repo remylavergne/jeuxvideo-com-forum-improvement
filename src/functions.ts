@@ -82,6 +82,20 @@ export function setGlobalConfiguration(globalConfig: GlobalConfiguration): void 
     })
 }
 
+// ---------------------------------------------------
+// -------            Utils                 ----------
+// ---------------------------------------------------
+
+/**
+ * Formate l'heure et la date du jour au moment de l'appel de la méthode
+ */
+export function getCurrentDateAndTime(): string {
+    var today = new Date();
+    var date = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear()
+    var time = today.getHours() + ":" + today.getMinutes() + ":" + today.getSeconds();
+    return time + ' ' + date;
+}
+
 /**
  * Affichage des logs en debug
  * @param {string} text 
