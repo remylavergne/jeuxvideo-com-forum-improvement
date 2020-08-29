@@ -103,7 +103,7 @@ async function checkFollowedForumsUpdate() {
         // Update Popup informations
         updateBadge(badgeCount);
     } else {
-        cnsl('Aucun forum suivi', {});
+        cnsl('Aucun forum suivi');
     }
 
     backupUpdates({ updates: updatesTemp });
