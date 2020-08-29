@@ -43,7 +43,14 @@ export function getUpdates(): Promise<UpdateBackup> {
     });
 }
 
-
+/**
+ * Contacte le background script pour mettre à jour le badge de l'extension
+ * @param count Nombre d'update backup
+ */
+export function updateBadgeCount(count: string): void {
+    cnsl('Update badge to =>', count);
+    chrome.runtime.sendMessage({ updateBadge: count });
+}
 
 /**
  * Récupère les informations de la dernière visite du forum.

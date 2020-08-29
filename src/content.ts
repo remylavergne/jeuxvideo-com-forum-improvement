@@ -1,5 +1,5 @@
-import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations } from "./functions";
-import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab } from "./classes";
+import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount } from "./functions";
+import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup } from "./classes";
 
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
@@ -13,8 +13,9 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
         currentTab = request.currentTab;
         forumInfos = getForumInformations(request.currentTab.url);
         if (forumInfos.isTopForum) {
-            await init();
+            init();
             addFollowButton();
+            checkUpdateBackup();
         }
     }
 });
@@ -206,11 +207,24 @@ async function updateSnapshot(forumId: string, snapshot: Snapshot, snapshotChang
     return snapshot;
 }
 
-async function addFollowButton() {
+async function addFollowButton(): Promise<void> {
     const isFollowed = await isFollowedForum();
     const followBtn = createButton(isFollowed);
     // Handle button clicks
     addLiveButtonListener(followBtn);
+}
+
+/** Si ce forum était dans les mises à jour trouvées, il faut le supprimer */
+function checkUpdateBackup(): void {
+    getUpdates().then((updateBackup: UpdateBackup) => {
+        if (updateBackup.updates.length > 0) {
+            const idx = updateBackup.updates.map(u => u.forumUrl).findIndex(url => url === currentTab.url);
+            cnsl('Index dans les update du forum', idx);
+            updateBackup.updates.splice(idx, 1);
+            backupUpdates(updateBackup);
+            updateBadgeCount(updateBackup.updates.length.toString());
+        }
+    });
 }
 
 /**
