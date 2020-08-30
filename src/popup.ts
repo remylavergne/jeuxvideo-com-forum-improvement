@@ -12,6 +12,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 window.onload = async function () {
     const updates = await getUpdates();
     updateForumsList(updates);
+    listentClickEvents();
 }
 
 const list = document.getElementsByClassName('forum-urls')[0];
@@ -19,9 +20,6 @@ const noUpdate = document.getElementById('no-update');
 const date = document.getElementById('footer-date');
 
 function updateForumsList(backup: UpdateBackup): void {
-
-    cnsl('Mise à jour reçue(s)', backup);
-    
 
     if (backup.updates.length > 0) {
         noUpdate.hidden = true;
@@ -34,13 +32,17 @@ function updateForumsList(backup: UpdateBackup): void {
             a.target = '_blank';
             a.innerHTML = update.forumTitle + ' : ' + update.updatedTopics + ' sujet(s) à jour et ' + update.switchedForums + ' nouveau(x)';
             li.appendChild(a);
-    
+
             list.appendChild(li);
         }
 
         date.innerHTML = backup.updates[0].date;
         cnsl('date span', date);
     }
+}
 
-    // TODO : Au clic sur un lien, le retirer de la liste (visibility hide ?)
+function listentClickEvents(): void {
+    document.getElementById('options-shortcut').addEventListener('click', (event) => {
+        chrome.runtime.openOptionsPage();
+    });
 }
