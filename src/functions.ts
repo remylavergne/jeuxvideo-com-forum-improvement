@@ -122,14 +122,33 @@ export function setGlobalConfiguration(globalConfig: GlobalConfiguration): void 
  */
 export function getCurrentDateAndTime(): string {
     var today = new Date();
+    // Time
+    let hours = today.getHours().toString();
     let minutes = today.getMinutes().toString();
-    if (Number(minutes) < 10) {
-        minutes = "0" + minutes;
-    }
-    var date = today.getDate() + '/' + (today.getMonth() + 1) + '/' + today.getFullYear()
-    var time = today.getHours() + ":" + minutes + ":" + today.getSeconds();
+    let seconds = today.getSeconds().toString();
+    // Format Time
+    hours = formatTwoChar(hours);
+    minutes = formatTwoChar(minutes);
+    seconds = formatTwoChar(seconds);
+    // Date
+    let day = today.getDate().toString();
+    let month = (today.getMonth() + 1).toString();
+    let year = today.getFullYear().toString();
+    // Format Date
+    day = formatTwoChar(day);
+    month = formatTwoChar(month);
+
+    var date = day + '/' + month + '/' + year
+    var time = hours + ":" + minutes + ":" + seconds;
     return time + ' ' + date;
 }
+
+function formatTwoChar(i): string {
+    if (i < 10) {
+      i = "0" + i;
+    }
+    return i;
+  }
 
 /**
  * Affichage des logs en debug
