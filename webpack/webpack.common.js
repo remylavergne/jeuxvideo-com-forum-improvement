@@ -19,6 +19,9 @@ module.exports = {
         filename: '[name].js'
     },
     optimization: {
+        namedChunks: true,
+        minimize: false,
+        chunkIds: 'named',
         splitChunks: {
             name: 'vendor',
             chunks: "initial"
