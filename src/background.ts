@@ -1,5 +1,8 @@
-import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, getUpdates } from "./functions";
-import { ForumsFollowed, Topic, Snapshot, Update } from "./classes";
+import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, setGlobalConfiguration, getGlobalConfiguration, forumSnapshot } from "./functions";
+import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, ForumInfos } from "./classes";
+import { defaultConfig } from "./objects";
+
+// TODO => Changer la couleur du badge si une nouvelle mise à jour, après une mise à jour. Et remettre la couleur par défaut au clic.
 
 /**
  * Variables
@@ -11,9 +14,11 @@ cnsl('Background script loaded at', Date.now());
  * Chrome API
  */
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
     chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
-    updateBadge(0);
+    updateBadge("0");
+    cnsl('Détails à l\'installation', details);
+    setDefaultGlobalConfiguration();
 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
@@ -21,12 +26,54 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         checkFollowedForumsUpdate();
     }
 });
-   
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    if (request.contentScripts === "requestCurrentTab") {
+    if (request.contentScripts === "content") {
         sendTabToContentScripts(sender);
     }
+
+    if (request.contentScripts === "topic-config") {
+        chrome.tabs.sendMessage(sender.tab.id, { contentTopicConfig: sender });
+    }
+
+    if (request.updateBadge) {
+        cnsl('Count du badge reçu', request.updateBadge);
+        updateBadge(request.updateBadge);
+    }
+
+    if (request.userReplyTo) {
+        const forumInfos: ForumInfos = request.userReplyTo;
+
+        getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+            try {
+                let topics = snapshot[forumInfos.id].topics;
+                const topic = topics.find((topic: Topic) => topic.id === forumInfos.topicId);
+                // Le forum n'est pas forcément enregistré (accès au forum via un lien direct vers le message).
+                // Donc, il n'y a pas de sauvegarde à modifier !
+                if (topic) {
+                    let tempCount = topic.count;
+                    tempCount = '' + (Number(tempCount) + 1);
+                    topics.find((topic: Topic) => topic.id === forumInfos.topicId).count = tempCount;
+                    // On sauvegarde la modification
+                    forumSnapshot(forumInfos.id, topics);
+                }
+            } catch (e) {
+                cnsl('Erreur à l\'incrémentation du nombre de message', e);
+            }
+        });
+    }
 });
+
+/**
+ * Initialise une configuration par défaut des options.
+ */
+function setDefaultGlobalConfiguration(): void {
+    getGlobalConfiguration().then((config: GlobalConfiguration) => {
+        if (!config.globalConfig) {
+            setGlobalConfiguration(defaultConfig);
+        }
+    })
+}
 
 /**
  * Vérifie pour chaque forum suivi, si du contenu est disponible.
@@ -80,9 +127,9 @@ async function checkFollowedForumsUpdate() {
         }
 
         // Update Popup informations
-        updateBadge(badgeCount);
+        updateBadge(badgeCount.toString());
     } else {
-        cnsl('Aucun forum suivi', {});
+        cnsl('Aucun forum suivi');
     }
 
     backupUpdates({ updates: updatesTemp });
@@ -92,8 +139,8 @@ async function checkFollowedForumsUpdate() {
  * Mise à jour du nombre de forum mis à jour sur le badge de l'extension
  * @param {number} number - Nombre de forum mis à jour
  */
-function updateBadge(number: number): void {
-    chrome.browserAction.setBadgeText({ text: number.toString() });
+function updateBadge(number: string): void {
+    chrome.browserAction.setBadgeText({ text: number });
 }
 
 /**

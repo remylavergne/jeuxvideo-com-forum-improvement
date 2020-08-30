@@ -1,5 +1,35 @@
-import { cnsl } from "./functions";
+import { getCurrentDateAndTime } from "./functions";
 
+
+export interface ChromeTab {
+    frameId: number,
+    id: string,
+    origin: string,
+    tab: Tab,
+    url: string
+}
+
+export interface Tab {
+    active: boolean,
+    audible: boolean,
+    autoDiscardable: boolean,
+    discarded: boolean,
+    favIconUrl: string,
+    height: number,
+    highlighted: boolean,
+    id: number,
+    incognito: boolean,
+    index: number,
+    mutedInfo: {muted: boolean},
+    openerTabId: number,
+    pinned: boolean,
+    selected: boolean,
+    status: string,
+    title: string,
+    url: string,
+    width: number,
+    windowId: number
+}
 /**
  * Classe représentant un forum, avec le minimum d'informations
  * pour la communication entre le background script et les options.
@@ -100,7 +130,7 @@ export class Topic {
         const urlMatchs = urlFull.match(idRegex)[0].split('-');
 
         let id = urlMatchs[2];
-        let url = urlFull; // TODO => Récupérer l'URL du topic dans le futur
+        let url = urlFull;
         let subject = element.children[0].innerText;
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
@@ -158,6 +188,8 @@ export class Update {
     switchedForums: number;
     updatedTopics: number;
     forum: Forum;
+    time: number;
+    date: string;
 
     /**
      * Informations liées à une mise à jour d'un forum
@@ -175,6 +207,8 @@ export class Update {
         this.switchedForums = switchedForums;
         this.updatedTopics = updatedTopics;
         this.forum = forum;
+        this.time = Date.now();
+        this.date = getCurrentDateAndTime();
     }
 }
 
@@ -189,8 +223,10 @@ export interface SnapshotTopics {
 
 export interface ForumInfos {
     id?: string;
+    topicId?: string;
     isTopForum: boolean;
     snapshot?: Snapshot;
+    url: string;
 }
 
 export interface TopicsAndElements {
@@ -212,4 +248,19 @@ export class SnapshotChanges {
 
 export interface UpdateBackup {
     updates: Update[];
+}
+
+export interface GlobalConfiguration {
+    globalConfig: Config
+}
+
+export interface DefaultGlobalConfiguration {
+    globalConfig: Config
+}
+export interface Config {
+    topic: TopicConfig;
+}
+
+export interface TopicConfig {
+    previsu: boolean;
 }

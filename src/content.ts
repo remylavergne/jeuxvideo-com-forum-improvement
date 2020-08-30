@@ -1,17 +1,22 @@
-import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus } from "./functions";
-import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum } from "./classes";
+import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount, forumSnapshot } from "./functions";
+import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup } from "./classes";
 
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
-let currentTab; // TODO => Faire une interface pour un objet tab
+let currentTab: ChromeTab; // TODO => Faire une interface pour un objet tab
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
-chrome.runtime.sendMessage({ contentScripts: "requestCurrentTab" });
+chrome.runtime.sendMessage({ contentScripts: "content" });
 
 chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
     if (request.currentTab) {
         currentTab = request.currentTab;
-        await init(request.currentTab);
+        forumInfos = getForumInformations(request.currentTab.url);
+        if (forumInfos.isTopForum) {
+            init();
+            addFollowButton();
+            checkUpdateBackup();
+        }
     }
 });
 
@@ -22,50 +27,23 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
  * Vérification du premier niveau du forum.
  * @param {*} tab - Informations de la tab courante
  */
-async function init(tab): Promise<void> {
-    forumInfos = getForumInformations(tab.url);
+async function init(): Promise<void> {
 
-    if (forumInfos.isTopForum) {
-        const currentTopics: TopicsAndElements = extractTopicsFromHTML();
-        const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
+    const currentTopics: TopicsAndElements = extractTopicsFromHTML();
+    const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
-        if (!snapshot[forumInfos.id]) {
-            // Save Snapshot
-            forumSnapshot(forumInfos.id, currentTopics.topics);
-        } else {
-            const previousTopics: Topic[] = snapshot[forumInfos.id].topics;
-            const snapshotChanges: SnapshotChanges = searchChanges(previousTopics, currentTopics.topics);
-            // Update views
-            let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
-            // Update data in local storage with current
-            updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
-            // Ecouter les événements sur les topics pour mettre à jour les données
-            watchUnreadTopics(forumInfos.id, htmlElementsToListen);
-        }
-
-        addFollowButton();
-
-        // // return new ForumInformations(forumInfos.id, snapshot);
-        // return { id: forumInfos.id, snapshot: snapshot, isTopForum: true };
+    if (!snapshot[forumInfos.id]) {
+        // Save Snapshot
+        forumSnapshot(forumInfos.id, currentTopics.topics);
     } else {
-        cnsl('Its not a top forum topic');
-    }
-}
-
-/**
- * Extrait l'id d'un forum en fonction de son URL et déduit si c'est bien la première page.
- * @param {string} forumUrl 
- */
-function getForumInformations(forumUrl: string): ForumInfos {
-    let regex = new RegExp(/\/0-\d+-0-1-0-1-0-/g);
-    let matchs = forumUrl.match(regex);
-
-    if (matchs && matchs.length > 0) {
-        const forumId = matchs[0].split("-")[1];
-
-        return { id: forumId, isTopForum: true };
-    } else {
-        return { id: null, isTopForum: false };
+        const previousTopics: Topic[] = snapshot[forumInfos.id].topics;
+        const snapshotChanges: SnapshotChanges = searchChanges(previousTopics, currentTopics.topics);
+        // Update views
+        let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
+        // Update data in local storage with current
+        updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
+        // Ecouter les événements sur les topics pour mettre à jour les données
+        watchUnreadTopics(forumInfos.id, htmlElementsToListen);
     }
 }
 
@@ -134,24 +112,7 @@ function extractTopicsFromHTML(): TopicsAndElements {
     return { topics: topics, elements: topicsElements };
 }
 
-/**
- * Permet de sauvegarder les topics d'un forum
- * @param {string} forumId - L'id du forum. Fourni dans l'URL
- * @param {Topic[]} currentTopics - Liste des topics en objet custom
- */
-function forumSnapshot(forumId: string, topics: Topic[]): void {
-    // Create a Snapshot
-    const snapshot: Snapshot = {
-        [forumId]: {
-            createdTime: Date.now(),
-            topics: topics
-        }
-    };
-    // Save it
-    chrome.storage.local.set(snapshot, () => {
-        cnsl('Data saved', snapshot);
-    })
-}
+
 
 /**
  * Update visuellement les topics qui ont été mis à jour par rapport à la dernière visite
@@ -229,11 +190,26 @@ async function updateSnapshot(forumId: string, snapshot: Snapshot, snapshotChang
     return snapshot;
 }
 
-async function addFollowButton() {
+async function addFollowButton(): Promise<void> {
     const isFollowed = await isFollowedForum();
     const followBtn = createButton(isFollowed);
     // Handle button clicks
     addLiveButtonListener(followBtn);
+}
+
+/** Si ce forum était dans les mises à jour trouvées, il faut le supprimer */
+function checkUpdateBackup(): void {
+    getUpdates().then((updateBackup: UpdateBackup) => {
+        if (updateBackup.updates.length > 0) {
+            const idx = updateBackup.updates.map(u => u.forumUrl).findIndex(url => url === currentTab.url);
+            cnsl('Index dans les update du forum', idx);
+            if (idx >= 0) {
+                updateBackup.updates.splice(idx, 1);
+                backupUpdates(updateBackup);
+                updateBadgeCount(updateBackup.updates.length.toString());
+            }
+        }
+    });
 }
 
 /**
@@ -316,7 +292,7 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
             follows.followedForums.push(newFollowedForum);
         }
         // Update snapshot
-        updateFollowStatus({ followedForums: follows.followedForums});
+        updateFollowStatus({ followedForums: follows.followedForums });
 
         // Ask to start background check
         chrome.runtime.sendMessage({ startBackgroundNotifications: true }, (response) => {
