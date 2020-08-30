@@ -15,6 +15,21 @@ Mais vous propose aussi de suivre spécifiquement les forums de votre choix, pou
 - Télécharger la [dernière version disponible](https://github.com/remylavergne/jeuxvideo-com-forum-improvement/releases)
 - Suivre ce tutoriel pour [installer une extension Chrome](https://developer.chrome.com/extensions/getstarted)
 
+## 🛠 Build du projet
+
+```text
+# Télécharger le code source
+git clone https://github.com/remylavergne/jeuxvideo-com-forum-improvement.git
+
+# Installer les dépendances npm
+npm install
+
+# Build
+npm run build
+
+# Les fichiers sont disponibles dans le dossier `dist`
+```
+
 ## 🚀 Fonctionnalités
 
 -> Les forums que vous visitez sont mis en cache. Lors de votre prochaine visite, les topics que vous n'avez pas lu, ou vu, seront affichés en bleu (statut non lu classique)
