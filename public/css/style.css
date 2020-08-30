@@ -8,8 +8,14 @@ body {
 }
 
 footer {
-  display: flex;
-  justify-content: flex-end;
+  width: 100%;
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+footer div {
+  margin: 4px;
 }
 
 .header-container {
@@ -80,12 +86,16 @@ a:active {
 }
 
 #no-update {
-    font-weight: 500;
-    font-size: medium;
-    margin-left: 12px;
+  font-weight: 500;
+  font-size: medium;
+  margin-left: 12px;
 }
 
-#footer-date {
+.footer-text {
   font-size: smaller;
   color: grey;
+}
+
+#options-shortcut {
+  cursor: pointer;
 }
