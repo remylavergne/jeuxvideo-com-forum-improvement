@@ -3,6 +3,12 @@ body {
   padding: 0;
 }
 
+footer {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+}
+
 .header-container {
   height: 30px;
   background-color: #004365;
@@ -173,4 +179,8 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+#github-report {
+    color: grey;
 }
