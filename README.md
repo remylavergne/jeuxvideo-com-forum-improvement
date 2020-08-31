@@ -1,10 +1,14 @@
 # 🎮 JeuxVideo.com forum amélioration (JV Live)
 
-Cette extension Chrome permet de mettre en évidence les topics qui ont été mis à jour pendant votre absence, pour une meilleure visibilité 🤓
+🎮 Cette extension est dédiée au forum *JeuxVideo.com*. Elle permet d'en améliorer son fonctionnement. 
 
-Mais vous propose aussi de suivre spécifiquement les forums de votre choix, pour **être notifié** dès que du nouveau contenu est disponible ! Plus besoin de rafraîchir le site manuellement, ni même d'aller voir au hasard 🤷‍♂️
+🚀 Mais quelles fonctionnalités propose-t'elle ?
 
-![](./resources/jv-forum-refresh-example.gif)
+➕ La gestion du statut des messages est enfin correcte. Si un message est actualisé pendant votre absence, ce dernier sera remis en bleu (statut non lu) à la prochaine visite.
+➕ Vous pouvez vous abonner aux forums de votre choix. Cela veut dire que même si vous ne naviguez pas sur le forum, l'extension va se charger d'aller vérifier si ces forums ont du nouveau contenu.
+Si oui, le badge de notification de l'extension en affichera le nombre exact.
+➕ Si du nouveau contenu est disponible, la fenêtre principale de l'extension vous affiche un lien avec le nombre de message, mais aussi les nouveaux disponibles.
+➕Un panneau d'option vous permet de gérer tous vos abonnements. Si vous ne voulez plus suivre un forum, cela se fait en un seul clic.
 
 ## 🌎 Installation depuis le Chrome Store
 
