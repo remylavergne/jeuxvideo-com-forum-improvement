@@ -2,8 +2,6 @@ import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, setGlobalConfi
 import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, ForumInfos } from "./classes";
 import { defaultConfig } from "./objects";
 
-// TODO => Changer la couleur du badge si une nouvelle mise à jour, après une mise à jour. Et remettre la couleur par défaut au clic.
-
 /**
  * Variables
  */

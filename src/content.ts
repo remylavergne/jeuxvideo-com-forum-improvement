@@ -3,7 +3,7 @@ import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum,
 
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
-let currentTab: ChromeTab; // TODO => Faire une interface pour un objet tab
+let currentTab: ChromeTab;
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "content" });

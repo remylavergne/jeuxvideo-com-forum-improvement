@@ -40,7 +40,7 @@ export class Forum {
     rssUrl: string;
     /**
      * Informations pour l'affichage d'un forum suivi dans les options globales 
-     * @param {string} name - Titre du forum // TODO => faire une regex
+     * @param {string} name - Titre du forum
      * @param {string} url - URL du forum
      * @param {string} rssUrl - URL du flux RSS
      */
@@ -71,7 +71,7 @@ export class Forum {
      * Création d'un objet Forum
      * @param {Object} obj 
      */
-    static fromObject(obj): Forum { // TODO => plus besoin avec les types
+    static fromObject(obj): Forum {
         return new Forum(obj.name, obj.url, obj.rssUrl);
     }
 }

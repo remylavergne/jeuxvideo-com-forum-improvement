@@ -8,9 +8,9 @@ window.onload = async function () {
     // setGlobalConfiguration({ globalConfig: { topic: { previsu: true}}});
 
     getGlobalConfiguration()
-    .then((globalConfig: GlobalConfiguration) => {
-        displayCurrentConfiguration(globalConfig);
-    }).catch(e => cnsl('Erreur à la récupération de la config', e));
+        .then((globalConfig: GlobalConfiguration) => {
+            displayCurrentConfiguration(globalConfig);
+        }).catch(e => cnsl('Erreur à la récupération de la config', e));
 };
 
 const body = document.getElementsByTagName('body')[0];
@@ -23,9 +23,6 @@ body.addEventListener('click', event => {
 
     removeForumSubscription(el.id);
 });
-
-// TODO => a l'installation appliquer une configuration de base
-// TODO => A l'update vérifier si config existante, sinon, la créer
 
 // Get HTML Elements
 const list = document.getElementsByClassName('forum-urls')[0];
@@ -69,25 +66,25 @@ async function removeForumSubscription(forumUrl): Promise<void> {
     const urls = data.followedForums.map(forum => forum.url);
     const idx = urls.findIndex(url => url === forumUrl);
     // Get id
-    const forum = Forum.fromObject(data.followedForums[idx]); // TODO => Update ça avec le vrai objet
+    const forum = Forum.fromObject(data.followedForums[idx]);
 
     data.followedForums.splice(idx, 1);
 
-    updateFollowStatus({ followedForums: data.followedForums});
+    updateFollowStatus({ followedForums: data.followedForums });
     // Refresh UI
     createForumsList();
     // Supprimer le snapshot du forum
     deleteForumSnapshot(forum.getId());
 }
 
-function deleteForumSnapshot(forumId: string) { // TODO => Export
+function deleteForumSnapshot(forumId: string) {
     chrome.storage.local.remove(forumId, () => {
         cnsl(`Forum ${forumId} snapshot deleted`);
     });
 }
 
 function displayCurrentConfiguration(config: GlobalConfiguration) {
-        setMessagePrev(config);
+    setMessagePrev(config);
 }
 
 // Default value === true
@@ -95,7 +92,7 @@ function setMessagePrev(config: GlobalConfiguration): void {
     const messagePrevSwitch = (document.getElementById('option-prev') as HTMLInputElement);
     messagePrevSwitch.checked = config.globalConfig.topic.previsu;
     // Listener
-    messagePrevSwitch.addEventListener('input', function(event) {
+    messagePrevSwitch.addEventListener('input', function (event) {
         // Update config
         config.globalConfig.topic.previsu = messagePrevSwitch.checked;
         // Save it
