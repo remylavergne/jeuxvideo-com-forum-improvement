@@ -16,11 +16,10 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
             init();
             addFollowButton();
             checkUpdateBackup();
+            checkBackgroundNotifierStatus();
         }
     }
 });
-
-// TODO => Faire une méthode de vérification aléatoire pour savoir si le background job tourne toujours
 
 /**
  * Initialise les méthodes pour la page actuelle.
@@ -209,6 +208,15 @@ function checkUpdateBackup(): void {
                 updateBadgeCount(updateBackup.updates.length.toString());
             }
         }
+    });
+}
+
+/**
+ * Au chargement d'une page du forum, on vérifie si le job de synchronisation fonctionne toujours.
+ */
+function checkBackgroundNotifierStatus(): void {
+    chrome.runtime.sendMessage({ isBackgroundJobRunning: true }, (responseCallback) => {
+        cnsl(responseCallback);
     });
 }
 

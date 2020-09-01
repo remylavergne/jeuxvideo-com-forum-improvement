@@ -15,7 +15,7 @@ cnsl('Background script loaded at', Date.now());
  */
 
 chrome.runtime.onInstalled.addListener((details) => {
-    chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
+    createBackgroundJobNotifier();
     updateBadge("0");
     cnsl('Détails à l\'installation', details);
     setDefaultGlobalConfiguration();
@@ -62,7 +62,31 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             }
         });
     }
+
+    if (request.isBackgroundJobRunning) {
+        chrome.alarms.getAll((alarms) => {
+            cnsl('Alarmes courantes', alarms);
+            if (alarms.length === 0) {
+                sendResponse('No alarm set...');
+                createBackgroundJobNotifier();
+            } else {
+                // Search Background Notifier alarm
+                const alarm = alarms.find(a => a.name === 'backgroundNotifications');
+                if (!alarm) {
+                    cnsl('Background job notifier créer');
+                    createBackgroundJobNotifier();
+                }
+            }
+        })
+    }
 });
+
+/**
+ * Création d'un job pour vérifier les mises à jour des forums suivis.
+ */
+function createBackgroundJobNotifier(): void {
+    chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
+}
 
 /**
  * Initialise une configuration par défaut des options.
