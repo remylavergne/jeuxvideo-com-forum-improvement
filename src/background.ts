@@ -73,7 +73,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                 // Search Background Notifier alarm
                 const alarm = alarms.find(a => a.name === 'backgroundNotifications');
                 if (!alarm) {
-                    cnsl('Background job notifier créer');
+                    cnsl('Background job notifier created');
                     createBackgroundJobNotifier();
                 }
             }
