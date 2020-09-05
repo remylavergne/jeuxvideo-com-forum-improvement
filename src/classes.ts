@@ -92,6 +92,7 @@ export class Topic {
     forumUrl: string;
     createdAt: number;
     forumTitle: string;
+    hasUserResponse: boolean;
 
     constructor(
         id: string,
@@ -117,6 +118,7 @@ export class Topic {
         this.forumUrl = forumUrl;
         this.createdAt = Date.now();
         this.forumTitle = forumTitle;
+        this.hasUserResponse = false;
     }
 
     /**
@@ -174,6 +176,10 @@ export class Topic {
      */
     isReadPending(): void {
         this.readPending = true;
+    }
+
+    updateReplyState(): void {
+        this.hasUserResponse = true;
     }
 }
 

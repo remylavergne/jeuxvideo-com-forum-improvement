@@ -21,6 +21,11 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
+// TODO => Mettre les topics où nous avons répondu dans une autre couleur
+// TODO => Un bouton tout marquer lu
+// TODO => Mettre les topics clos en lu
+// TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
+
 /**
  * Initialise les méthodes pour la page actuelle.
  * Vérification du premier niveau du forum.
@@ -31,6 +36,8 @@ async function init(): Promise<void> {
     const currentTopics: TopicsAndElements = extractTopicsFromHTML();
     const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
+    cnsl('snapshot', snapshot);
+    
     if (!snapshot[forumInfos.id]) {
         // Save Snapshot
         forumSnapshot(forumInfos.id, currentTopics.topics);
@@ -126,7 +133,12 @@ function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, up
         for (let el of topicElements) {
             if (el.dataset.id === topic.id) {
                 el.innerHTML = topic.innerHTML;
-                el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
+                // Application d'un couleur différente si l'utilisateur a déjà répondu au topic
+                if (!topic.hasUserResponse) {
+                    applyUnreadColor(el);
+                } else {
+                    applyUnreadParticipatingColor(el);
+                }
                 // Save element reference to watch it
                 elements.push(el);
             }
@@ -134,6 +146,14 @@ function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, up
     }
 
     return elements;
+}
+
+function applyUnreadColor(element: HTMLLIElement): void {
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
+}
+
+function applyUnreadParticipatingColor(element: HTMLLIElement): void {
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#ff572e';
 }
 
 /**

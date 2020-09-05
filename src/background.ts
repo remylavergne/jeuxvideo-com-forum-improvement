@@ -52,6 +52,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                     let tempCount = topic.count;
                     tempCount = '' + (Number(tempCount) + 1);
                     topics.find((topic: Topic) => topic.id === forumInfos.topicId).count = tempCount;
+                    topics.find((topic: Topic) => topic.id === forumInfos.topicId).hasUserResponse = true;
                     // On sauvegarde la modification
                     forumSnapshot(forumInfos.id, topics);
                 }
