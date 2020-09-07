@@ -4,6 +4,7 @@ import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum,
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
 let currentTab: ChromeTab;
+let currentTopicsInstance: TopicsAndElements;
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "content" });
@@ -14,14 +15,13 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
         forumInfos = getForumInformations(request.currentTab.url);
         if (forumInfos.isTopForum) {
             initialization();
-            addFollowButton();
+            addOptionsButtons();
             checkUpdateBackup();
             checkBackgroundNotifierStatus();
         }
     }
 });
 
-// TODO => Un bouton tout marquer lu
 // TODO => Mettre les topics clos en lu
 // TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
 
@@ -33,6 +33,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
 async function initialization(): Promise<void> {
 
     const currentTopics: TopicsAndElements = extractTopicsFromHTML();
+    currentTopicsInstance = currentTopics; // TODO => Extract this ? 
     const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
     if (!snapshot[forumInfos.id]) {
@@ -131,6 +132,7 @@ function extractTopicsFromHTML(): TopicsAndElements {
 function colorizeItems(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
 
     let elements: HTMLLIElement[] = [];
+
     for (let topic of updatedTopics) {
         for (let el of topicElements) {
             if (el.dataset.id === topic.id) { // TODO => Vérifier le dataset, car sur certain forum ça ne fonctionne pas...
@@ -213,11 +215,27 @@ async function updateSnapshot(forumId: string, snapshot: Snapshot, snapshotChang
     return snapshot;
 }
 
-async function addFollowButton(): Promise<void> {
-    const isFollowed = await isFollowedForum();
-    const followBtn = createButton(isFollowed);
-    // Handle button clicks
-    addLiveButtonListener(followBtn);
+function addOptionsButtons() {
+    isFollowedForum().then((isFollowed: boolean) => {
+        // Récupération du bloc header
+        // /!\ Il y a 2 header-bloc
+        let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
+        // Création de l'espace des options
+        let forumOptions = document.createElement('div');
+        forumOptions.classList.add('forum-options');
+        // Create buttons
+        const followBtn = createFollowButton(isFollowed);
+        const readAllBtn = createReadAllButton();
+        // Insert buttons
+        forumOptions.appendChild(followBtn);
+        forumOptions.appendChild(readAllBtn);
+        // Add option container
+        forumHeaderBloc.after(forumOptions);
+
+        // Handle button clicks
+        addLiveButtonListener(followBtn);
+        addReadAllButtonListener(readAllBtn);
+    });
 }
 
 /** Si ce forum était dans les mises à jour trouvées, il faut le supprimer */
@@ -266,31 +284,21 @@ async function isFollowedForum(): Promise<boolean> {
  * Création du bouton pour suivre un forum
  * @param {boolean} isForumFollowed - Etat du bouton en fonction du statut de suivi
  */
-function createButton(isForumFollowed: boolean): HTMLDivElement {
-    // Récupération du bloc header
-    // /!\ Il y a 2 header-bloc
-    let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
-    // Création de l'espace des options
-    let forumOptions = document.createElement('div');
-    forumOptions.classList.add('forum-options');
+function createFollowButton(isForumFollowed: boolean): HTMLDivElement {
     // Création du bouton follow
     let followBtn = document.createElement('div');
     followBtn.classList.add('follow-btn');
     // Button condition
     updateFollowButtonUI(followBtn, isForumFollowed);
-    // Insertion des options
-    forumOptions.appendChild(followBtn);
-    // Ajout de la vue
-    forumHeaderBloc.after(forumOptions);
 
     return followBtn;
 }
 
 function updateFollowButtonUI(followBtn: HTMLDivElement, isForumFollowed: boolean) {
     if (isForumFollowed) {
-        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivi</button></a>';
+        followBtn.innerHTML = '<a><button class="optionButton">Suivi</button></a>';
     } else {
-        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+        followBtn.innerHTML = '<a><button class="optionButton">Suivre</button></a>';
     }
 }
 
@@ -331,5 +339,39 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
             cnsl(response);
         })
     });
+}
+
+function addReadAllButtonListener(readAllBtn: HTMLDivElement): void {
+    readAllBtn.addEventListener('click', () => {
+        // Colorize all link to grey (like when user opened it)
+        for (var i = 1; i < currentTopicsInstance.elements.length; i++) {
+            currentTopicsInstance.elements[i].getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
+        }
+        // Update Snapshot count of each
+        const forumId = forumInfos.id;
+        getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+            for (let currentTopic of currentTopicsInstance.topics) {
+                const index = snapshot[forumId].topics.findIndex(t => t.id === currentTopic.id);
+                if (index !== -1){
+                    snapshot[forumId].topics[index].count = currentTopic.count;
+                    snapshot[forumId].topics[index].readPending = false;
+                }
+            }
+            // Update Snapshot
+            forumSnapshot(forumId, snapshot[forumId].topics);
+        });
+    })
+}
+
+/**
+ * Bouton permettant de lire tous les topics en une fois
+ */
+function createReadAllButton(): HTMLDivElement {
+    // Création du bouton follow
+    let readAllBtn = document.createElement('div');
+    readAllBtn.classList.add('read-all');
+    readAllBtn.innerHTML = '<a><button class="optionButton">Tout lire</button></a>';
+
+    return readAllBtn;
 }
 
