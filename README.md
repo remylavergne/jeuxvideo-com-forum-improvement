@@ -9,6 +9,8 @@
 Si oui, le badge de notification de l'extension en affichera le nombre exact.
 ➕ Si du nouveau contenu est disponible, la fenêtre principale de l'extension vous affiche un lien avec le nombre de message, mais aussi les nouveaux disponibles.
 ➕Un panneau d'option vous permet de gérer tous vos abonnements. Si vous ne voulez plus suivre un forum, cela se fait en un seul clic.
+➕Les sujets auxquels nous avons répondu seront dans une autre couleur si de nouveaux messages arrivent (pour un meilleur suivi).
+➕Il est possible de lire tous les messages d'un forum en un seul clic via le bouton **TOUT LIRE**.
 
 ## 🌎 Installation depuis le Chrome Store
 
