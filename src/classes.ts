@@ -177,10 +177,6 @@ export class Topic {
     isReadPending(): void {
         this.readPending = true;
     }
-
-    updateReplyState(): void {
-        this.hasUserResponse = true;
-    }
 }
 
 export interface ForumsFollowed {
