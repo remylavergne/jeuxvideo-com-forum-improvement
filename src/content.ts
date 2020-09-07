@@ -13,7 +13,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
         currentTab = request.currentTab;
         forumInfos = getForumInformations(request.currentTab.url);
         if (forumInfos.isTopForum) {
-            init();
+            initialization();
             addFollowButton();
             checkUpdateBackup();
             checkBackgroundNotifierStatus();
@@ -21,7 +21,6 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
-// TODO => Mettre les topics où nous avons répondu dans une autre couleur
 // TODO => Un bouton tout marquer lu
 // TODO => Mettre les topics clos en lu
 // TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
@@ -31,51 +30,56 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
  * Vérification du premier niveau du forum.
  * @param {*} tab - Informations de la tab courante
  */
-async function init(): Promise<void> {
+async function initialization(): Promise<void> {
 
     const currentTopics: TopicsAndElements = extractTopicsFromHTML();
     const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
-    cnsl('snapshot', snapshot);
-    
     if (!snapshot[forumInfos.id]) {
-        // Save Snapshot
+        // Première visite du forum
         forumSnapshot(forumInfos.id, currentTopics.topics);
     } else {
-        const previousTopics: Topic[] = snapshot[forumInfos.id].topics;
-        const snapshotChanges: SnapshotChanges = searchChanges(previousTopics, currentTopics.topics);
+        // Récupération des topics du snapshot
+        const snapshotTopics: Topic[] = snapshot[forumInfos.id].topics;
+        // Détecter tous les changements depuis la dernière visite
+        const snapshotChanges: SnapshotChanges = findUpdatedTopics(snapshotTopics, currentTopics.topics);
         // Update views
-        let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
+        let unreadItems = colorizeItems(currentTopics.elements, snapshotChanges.updated);
+        // Ecouter les événements sur les topics pour mettre à jour les données
+        watchUnreadTopics(forumInfos.id, unreadItems);
         // Update data in local storage with current
         updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
-        // Ecouter les événements sur les topics pour mettre à jour les données
-        watchUnreadTopics(forumInfos.id, htmlElementsToListen);
     }
 }
 
 /**
- * Cherche les topics qui ont été mis à jour.
+ * Cette méthode permet d'extraire une liste de topics mis à jour :
+ * - Les anciens topics avec de nouvelles réponses
+ * - Les nouveaux topics, ou ceux qui sont remontés en première page
+ * - Les topics qui sont passés dans les pages 2 et + (donc plus visibles)
+ * @param previousTopics - Les topics issus du dernier Snapshot
+ * @param currentTopics - Les topics actuels extraient au chargement de la page
  */
-function searchChanges(previousTopics: Topic[], currentTopics: Topic[]): SnapshotChanges {
-
+function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): SnapshotChanges {
     let updatedTopics: Topic[] = [];
 
-    // Search updated topics since last visit
-    for (let topic of currentTopics) {
+    for (let currentTopic of currentTopics) {
+        let previousTopicFound = previousTopics.find((t: Topic) => t.id === currentTopic.id);
 
-        let topicFound = previousTopics.find(t => t.id === topic.id);
+        if (previousTopicFound) {
+            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.isReadPending;
 
-        if (topicFound) {
-            const isDiff = (topicFound.count !== topic.count) || topicFound.isReadPending;
+            if (isUpdated) {
+                // Copy params from previous topic
+                currentTopic.hasUserResponse = previousTopicFound.hasUserResponse;
+                currentTopic.readPending = previousTopicFound.readPending;
 
-            if (isDiff) {
-                updatedTopics.push(topic);
+                updatedTopics.push(currentTopic);
             }
         }
     }
 
     // Trouver des nouveaux topics, ou des vieux topics qui remontent
-
     let previousTopicsId = previousTopics.map(topic => topic.id);
     let currentTopicsId = currentTopics.map(topic => topic.id);
 
@@ -118,22 +122,19 @@ function extractTopicsFromHTML(): TopicsAndElements {
     return { topics: topics, elements: topicsElements };
 }
 
-
-
 /**
  * Update visuellement les topics qui ont été mis à jour par rapport à la dernière visite
  * Les liens deviennnent bleus pour indiquer le nouveau contenu non lu
  * @param {HTMLCollection} topicElements - Les éléments des topics de la page courante
  * @param {Topic[]} updatedTopics - Les topics qui ont du nouveau contenu, et qu'il faut mettre en surbrillance
  */
-function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
+function colorizeItems(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
 
     let elements: HTMLLIElement[] = [];
     for (let topic of updatedTopics) {
         for (let el of topicElements) {
-            if (el.dataset.id === topic.id) {
+            if (el.dataset.id === topic.id) { // TODO => Vérifier le dataset, car sur certain forum ça ne fonctionne pas...
                 el.innerHTML = topic.innerHTML;
-                // Application d'un couleur différente si l'utilisateur a déjà répondu au topic
                 if (!topic.hasUserResponse) {
                     applyUnreadColor(el);
                 } else {
@@ -165,17 +166,20 @@ async function watchUnreadTopics(forumId, elements) {
 
     for (let i = 0; i < elements.length; i++) {
         (function (index) {
-            let el = elements[index];
+            let el = elements[index] as HTMLLIElement;
             el.addEventListener('click', async function () {
                 el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
                 // Update snapshot
                 let snapshot = await getLastSnapshot(forumInfos.id);
                 let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
                 // Create new topic object with current topic element informations
-                let updatedTopic = Topic.fromHTML(el);
-                snapshot[forumId].topics[idx] = updatedTopic;
-                // Synchronize updated snapshot to local storage
-                forumSnapshot(forumId, snapshot[forumId].topics);
+                if (idx !== -1) {
+                    let updatedTopic = Topic.fromHTML(el);
+                    snapshot[forumId].topics[idx].count = updatedTopic.count;
+                    snapshot[forumId].topics[idx].readPending = false;
+                    // Synchronize updated snapshot to local storage
+                    forumSnapshot(forumId, snapshot[forumId].topics);
+                }
             }, false);
         })(i)
     }
