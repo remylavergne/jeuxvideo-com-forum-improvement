@@ -4,6 +4,7 @@ import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum,
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
 let currentTab: ChromeTab;
+let currentTopicsInstance: TopicsAndElements;
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "content" });
@@ -21,7 +22,6 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
-// TODO => Un bouton tout marquer lu
 // TODO => Mettre les topics clos en lu
 // TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
 
@@ -33,6 +33,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
 async function initialization(): Promise<void> {
 
     const currentTopics: TopicsAndElements = extractTopicsFromHTML();
+    currentTopicsInstance = currentTopics; // TODO => Extract this ? 
     const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
     if (!snapshot[forumInfos.id]) {
@@ -342,7 +343,23 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
 
 function addReadAllButtonListener(readAllBtn: HTMLDivElement): void {
     readAllBtn.addEventListener('click', () => {
-        alert('Read all clicked');
+        // Colorize all link to grey (like when user opened it)
+        for (var i = 1; i < currentTopicsInstance.elements.length; i++) {
+            currentTopicsInstance.elements[i].getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
+        }
+        // Update Snapshot count of each
+        const forumId = forumInfos.id;
+        getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+            for (let currentTopic of currentTopicsInstance.topics) {
+                const index = snapshot[forumId].topics.findIndex(t => t.id === currentTopic.id);
+                if (index !== -1){
+                    snapshot[forumId].topics[index].count = currentTopic.count;
+                    snapshot[forumId].topics[index].readPending = false;
+                }
+            }
+            // Update Snapshot
+            forumSnapshot(forumId, snapshot[forumId].topics);
+        });
     })
 }
 
