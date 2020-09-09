@@ -5,19 +5,18 @@
 }
 
 .optionButton {
-  box-shadow: inset 0px 1px 0px 0px #7a8eb9;
-  background: linear-gradient(to bottom, #637aad 5%, #5972a7 100%);
-  background-color: #637aad;
-  border: 1px solid #314179;
-  display: flex;
-  margin-right: 6px;
-  cursor: pointer;
-  color: #ffffff;
-  font-family: Arial;
-  font-size: 13px;
-  font-weight: bold;
-  padding: 6px 12px;
-  text-decoration: none;
+    border: .0625rem solid #5d6871;
+    background: #6c7984;
+    color: #fff;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 0;
+    font-size: .625rem;
+    height: 1.75rem;
+    min-width: 6.375rem;
+    line-height: 1.6875rem;
+    border-radius: .125rem;
+    margin-right: 6px;
 }
 .optionButton:hover {
   background: linear-gradient(to bottom, #5972a7 5%, #637aad 100%);

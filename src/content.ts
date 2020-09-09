@@ -22,6 +22,7 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
+// TODO => Nouveau topic en vert ;) 
 // TODO => Mettre les topics clos en lu
 // TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
 
@@ -68,7 +69,7 @@ function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): Sna
         let previousTopicFound = previousTopics.find((t: Topic) => t.id === currentTopic.id);
 
         if (previousTopicFound) {
-            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.isReadPending;
+            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.readPending;
 
             if (isUpdated) {
                 // Copy params from previous topic
@@ -133,18 +134,24 @@ function colorizeItems(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTo
 
     let elements: HTMLLIElement[] = [];
 
-    for (let topic of updatedTopics) {
-        for (let el of topicElements) {
-            if (el.dataset.id === topic.id) { // TODO => Vérifier le dataset, car sur certain forum ça ne fonctionne pas...
-                el.innerHTML = topic.innerHTML;
-                if (!topic.hasUserResponse) {
-                    applyUnreadColor(el);
-                } else {
-                    applyUnreadParticipatingColor(el);
-                }
-                // Save element reference to watch it
-                elements.push(el);
+    const collection = [...topicElements];
+    collection.shift(); // Suppression du titre du tableau
+
+    for (let el of collection) {
+        // Vérifie si l'élément est dans les updates
+        const updatedTopic = updatedTopics.find((t: Topic) => t.id === el.dataset.id);
+
+        if (updatedTopic) {
+            // On le sauvegarde pour ajouter un listener
+            elements.push(el);
+            // On applique la couleur qu'il faut
+            if (!updatedTopic.hasUserResponse || updatedTopic.readPending) {
+                applyUnreadColor(el);
+            } else {
+                applyUnreadParticipatingColor(el);
             }
+        } else {
+            applyReadColor(el);
         }
     }
 
@@ -159,29 +166,34 @@ function applyUnreadParticipatingColor(element: HTMLLIElement): void {
     element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#ff572e';
 }
 
+function applyReadColor(element: HTMLLIElement): void {
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
+}
+
 /**
  * Applique un clic listener sur chaque topic en attente de lecture.
  * @param {string} forumId 
  * @param {HTMLElement} elements 
  */
-async function watchUnreadTopics(forumId, elements) {
+async function watchUnreadTopics(forumId: string, elements: HTMLLIElement[]) {
 
     for (let i = 0; i < elements.length; i++) {
         (function (index) {
             let el = elements[index] as HTMLLIElement;
-            el.addEventListener('click', async function () {
+            el.addEventListener('click', function () {
                 el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
                 // Update snapshot
-                let snapshot = await getLastSnapshot(forumInfos.id);
-                let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
-                // Create new topic object with current topic element informations
-                if (idx !== -1) {
-                    let updatedTopic = Topic.fromHTML(el);
-                    snapshot[forumId].topics[idx].count = updatedTopic.count;
-                    snapshot[forumId].topics[idx].readPending = false;
-                    // Synchronize updated snapshot to local storage
-                    forumSnapshot(forumId, snapshot[forumId].topics);
-                }
+                getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+                    let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
+                    // Create new topic object with current topic element informations
+                    if (idx !== -1) {
+                        let updatedTopic = Topic.fromHTML(el);
+                        snapshot[forumId].topics[idx].count = updatedTopic.count;
+                        snapshot[forumId].topics[idx].readPending = false;
+                        // Synchronize updated snapshot to local storage
+                        forumSnapshot(forumId, snapshot[forumId].topics);
+                    }
+                }).catch((error) => cnsl('Error on watchUnreadTopics', error));
             }, false);
         })(i)
     }
@@ -241,7 +253,7 @@ function addOptionsButtons() {
 /** Si ce forum était dans les mises à jour trouvées, il faut le supprimer */
 function checkUpdateBackup(): void {
     getUpdates().then((updateBackup: UpdateBackup) => {
-        if (updateBackup.updates.length > 0) {
+        if (updateBackup.updates && updateBackup.updates.length > 0) {
             const idx = updateBackup.updates.map(u => u.forumUrl).findIndex(url => url === currentTab.url);
             cnsl('Index dans les update du forum', idx);
             if (idx >= 0) {
@@ -321,7 +333,7 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
         if (!follows['followedForums']) {
             follows.followedForums = [];
         }
-
+        // Logique suivi / non suivi
         if (isFollowed) {
             const links = follows.followedForums.map((forum: Forum) => forum.rssUrl);
             let idx = links.findIndex((link: string) => link === rssLink);
@@ -352,7 +364,7 @@ function addReadAllButtonListener(readAllBtn: HTMLDivElement): void {
         getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
             for (let currentTopic of currentTopicsInstance.topics) {
                 const index = snapshot[forumId].topics.findIndex(t => t.id === currentTopic.id);
-                if (index !== -1){
+                if (index !== -1) {
                     snapshot[forumId].topics[index].count = currentTopic.count;
                     snapshot[forumId].topics[index].readPending = false;
                 }

@@ -86,7 +86,6 @@ export class Topic {
     author: string;
     count: string;
     date: string;
-    innerHTML: string;
     readPending: boolean;
     forumId: string;
     forumUrl: string;
@@ -101,7 +100,6 @@ export class Topic {
         author: string,
         count: string,
         date: string,
-        innerHTML: string,
         forumId: string,
         forumUrl: string,
         forumTitle: string
@@ -112,7 +110,6 @@ export class Topic {
         this.author = author;
         this.count = count;
         this.date = date;
-        this.innerHTML = innerHTML;
         this.readPending = false;
         this.forumId = forumId;
         this.forumUrl = forumUrl;
@@ -137,12 +134,11 @@ export class Topic {
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
         let date = element.children[3].innerText;
-        let innerHTML = element.innerHTML.trim();
         let forumId = urlMatchs[1];
         let forumUrl = ''
         let forumTitle = '';
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
+        return new Topic(id, url, subject, author, count, date, forumId, forumUrl, forumTitle);
     }
 
     /**
@@ -165,10 +161,9 @@ export class Topic {
         let author = (globalInfos.match(authorRegex) || []).map(e => e.replace(authorRegex, '$1'))[0].trim();
         let count = (globalInfos.match(countRegex) || []).map(e => e.replace(countRegex, '$1'))[0].trim();
         let date = '';
-        let innerHTML = '';
         let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
+        return new Topic(id, url, subject, author, count, date, forumId, forumUrl, forumTitle);
     }
 
     /**
