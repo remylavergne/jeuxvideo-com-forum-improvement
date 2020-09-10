@@ -92,6 +92,7 @@ export class Topic {
     createdAt: number;
     forumTitle: string;
     hasUserResponse: boolean;
+    isNew = false;
 
     constructor(
         id: string,
@@ -260,4 +261,11 @@ export interface Config {
 
 export interface TopicConfig {
     previsu: boolean;
+}
+
+export enum TopicState {
+    UNREAD = '#006bd7',
+    FOCUS = '#ff572e',
+    READ = '#777',
+    NEW = '#4CC450'
 }

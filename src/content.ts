@@ -1,5 +1,5 @@
 import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount, forumSnapshot } from "./functions";
-import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup } from "./classes";
+import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup, TopicState } from "./classes";
 
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
@@ -22,7 +22,6 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
     }
 });
 
-// TODO => Nouveau topic en vert ;) 
 // TODO => Mettre les topics clos en lu
 // TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
 
@@ -76,6 +75,12 @@ function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): Sna
                 currentTopic.hasUserResponse = previousTopicFound.hasUserResponse;
                 currentTopic.readPending = previousTopicFound.readPending;
 
+                if (previousTopicFound.isNew) {
+                    // Au premier chargement, le topic est nouveau.
+                    // Si l'utilisateur recharge la page, une seconde fois, le topic n'est plus nouveau, mais juste non lu.
+                    currentTopic.readPending = true;
+                }
+
                 updatedTopics.push(currentTopic);
             }
         }
@@ -92,7 +97,7 @@ function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): Sna
     let newTopics: Topic[] = [];
     for (let id of newTopicsId) {
         let newTopic = currentTopics.find(t => t.id === id);
-        newTopic.isReadPending();
+        newTopic.isNew = true;
         newTopics.push(newTopic);
         // Global update
         updatedTopics.push(newTopic);
@@ -145,29 +150,23 @@ function colorizeItems(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTo
             // On le sauvegarde pour ajouter un listener
             elements.push(el);
             // On applique la couleur qu'il faut
-            if (!updatedTopic.hasUserResponse || updatedTopic.readPending) {
-                applyUnreadColor(el);
+            if (updatedTopic.isNew) {
+                applyColorToElement(el, TopicState.NEW);
+            } else if (updatedTopic.readPending || !updatedTopic.hasUserResponse) {
+                applyColorToElement(el, TopicState.UNREAD);
             } else {
-                applyUnreadParticipatingColor(el);
+                applyColorToElement(el, TopicState.FOCUS);
             }
         } else {
-            applyReadColor(el);
+            applyColorToElement(el, TopicState.READ);
         }
     }
 
     return elements;
 }
 
-function applyUnreadColor(element: HTMLLIElement): void {
-    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
-}
-
-function applyUnreadParticipatingColor(element: HTMLLIElement): void {
-    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#ff572e';
-}
-
-function applyReadColor(element: HTMLLIElement): void {
-    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
+function applyColorToElement(element: HTMLLIElement, state: TopicState): void {
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = state;
 }
 
 /**
@@ -367,6 +366,7 @@ function addReadAllButtonListener(readAllBtn: HTMLDivElement): void {
                 if (index !== -1) {
                     snapshot[forumId].topics[index].count = currentTopic.count;
                     snapshot[forumId].topics[index].readPending = false;
+                    snapshot[forumId].topics[index].isNew = false;
                 }
             }
             // Update Snapshot
