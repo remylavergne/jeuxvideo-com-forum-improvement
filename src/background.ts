@@ -2,8 +2,6 @@ import { cnsl, getFollowedForums, getLastSnapshot, backupUpdates, setGlobalConfi
 import { ForumsFollowed, Topic, Snapshot, Update, GlobalConfiguration, ForumInfos } from "./classes";
 import { defaultConfig } from "./objects";
 
-// TODO => Changer la couleur du badge si une nouvelle mise à jour, après une mise à jour. Et remettre la couleur par défaut au clic.
-
 /**
  * Variables
  */
@@ -15,7 +13,7 @@ cnsl('Background script loaded at', Date.now());
  */
 
 chrome.runtime.onInstalled.addListener((details) => {
-    chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
+    createBackgroundJobNotifier();
     updateBadge("0");
     cnsl('Détails à l\'installation', details);
     setDefaultGlobalConfiguration();
@@ -54,6 +52,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
                     let tempCount = topic.count;
                     tempCount = '' + (Number(tempCount) + 1);
                     topics.find((topic: Topic) => topic.id === forumInfos.topicId).count = tempCount;
+                    topics.find((topic: Topic) => topic.id === forumInfos.topicId).hasUserResponse = true;
                     // On sauvegarde la modification
                     forumSnapshot(forumInfos.id, topics);
                 }
@@ -62,7 +61,31 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             }
         });
     }
+
+    if (request.isBackgroundJobRunning) {
+        chrome.alarms.getAll((alarms) => {
+            cnsl('Alarmes courantes', alarms);
+            if (alarms.length === 0) {
+                sendResponse('No alarm set...');
+                createBackgroundJobNotifier();
+            } else {
+                // Search Background Notifier alarm
+                const alarm = alarms.find(a => a.name === 'backgroundNotifications');
+                if (!alarm) {
+                    cnsl('Background job notifier created');
+                    createBackgroundJobNotifier();
+                }
+            }
+        })
+    }
 });
+
+/**
+ * Création d'un job pour vérifier les mises à jour des forums suivis.
+ */
+function createBackgroundJobNotifier(): void {
+    chrome.alarms.create('backgroundNotifications', { periodInMinutes: 2 });
+}
 
 /**
  * Initialise une configuration par défaut des options.

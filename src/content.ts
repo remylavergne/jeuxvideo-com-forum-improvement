@@ -1,9 +1,10 @@
 import { cnsl, getLastSnapshot, getFollowedForums, updateFollowStatus, getForumInformations, getUpdates, backupUpdates, updateBadgeCount, forumSnapshot } from "./functions";
-import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup } from "./classes";
+import { ForumInfos, TopicsAndElements, Snapshot, Topic, SnapshotChanges, Forum, ChromeTab, UpdateBackup, TopicState } from "./classes";
 
 cnsl('Content script loaded at', Date.now());
 let forumInfos: ForumInfos;
-let currentTab: ChromeTab; // TODO => Faire une interface pour un objet tab
+let currentTab: ChromeTab;
+let currentTopicsInstance: TopicsAndElements;
 
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "content" });
@@ -13,63 +14,79 @@ chrome.runtime.onMessage.addListener(async function (request, sender, sendRespon
         currentTab = request.currentTab;
         forumInfos = getForumInformations(request.currentTab.url);
         if (forumInfos.isTopForum) {
-            init();
-            addFollowButton();
+            initialization();
+            addOptionsButtons();
             checkUpdateBackup();
+            checkBackgroundNotifierStatus();
         }
     }
 });
 
-// TODO => Faire une méthode de vérification aléatoire pour savoir si le background job tourne toujours
+// TODO => Mettre les topics clos en lu
+// TODO => Possibilité de ne pas suivre des topics (jugés inintéressants) => Grosse feature
 
 /**
  * Initialise les méthodes pour la page actuelle.
  * Vérification du premier niveau du forum.
  * @param {*} tab - Informations de la tab courante
  */
-async function init(): Promise<void> {
+async function initialization(): Promise<void> {
 
     const currentTopics: TopicsAndElements = extractTopicsFromHTML();
+    currentTopicsInstance = currentTopics; // TODO => Extract this ? 
     const snapshot: Snapshot = await getLastSnapshot(forumInfos.id);
 
     if (!snapshot[forumInfos.id]) {
-        // Save Snapshot
+        // Première visite du forum
         forumSnapshot(forumInfos.id, currentTopics.topics);
     } else {
-        const previousTopics: Topic[] = snapshot[forumInfos.id].topics;
-        const snapshotChanges: SnapshotChanges = searchChanges(previousTopics, currentTopics.topics);
+        // Récupération des topics du snapshot
+        const snapshotTopics: Topic[] = snapshot[forumInfos.id].topics;
+        // Détecter tous les changements depuis la dernière visite
+        const snapshotChanges: SnapshotChanges = findUpdatedTopics(snapshotTopics, currentTopics.topics);
         // Update views
-        let htmlElementsToListen = injectUpdatedElement(currentTopics.elements, snapshotChanges.updated);
+        let unreadItems = colorizeItems(currentTopics.elements, snapshotChanges.updated);
+        // Ecouter les événements sur les topics pour mettre à jour les données
+        watchUnreadTopics(forumInfos.id, unreadItems);
         // Update data in local storage with current
         updateSnapshot(forumInfos.id, snapshot, snapshotChanges);
-        // Ecouter les événements sur les topics pour mettre à jour les données
-        watchUnreadTopics(forumInfos.id, htmlElementsToListen);
     }
 }
 
 /**
- * Cherche les topics qui ont été mis à jour.
+ * Cette méthode permet d'extraire une liste de topics mis à jour :
+ * - Les anciens topics avec de nouvelles réponses
+ * - Les nouveaux topics, ou ceux qui sont remontés en première page
+ * - Les topics qui sont passés dans les pages 2 et + (donc plus visibles)
+ * @param previousTopics - Les topics issus du dernier Snapshot
+ * @param currentTopics - Les topics actuels extraient au chargement de la page
  */
-function searchChanges(previousTopics: Topic[], currentTopics: Topic[]): SnapshotChanges {
-
+function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): SnapshotChanges {
     let updatedTopics: Topic[] = [];
 
-    // Search updated topics since last visit
-    for (let topic of currentTopics) {
+    for (let currentTopic of currentTopics) {
+        let previousTopicFound = previousTopics.find((t: Topic) => t.id === currentTopic.id);
 
-        let topicFound = previousTopics.find(t => t.id === topic.id);
+        if (previousTopicFound) {
+            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.readPending;
 
-        if (topicFound) {
-            const isDiff = (topicFound.count !== topic.count) || topicFound.isReadPending;
+            if (isUpdated) {
+                // Copy params from previous topic
+                currentTopic.hasUserResponse = previousTopicFound.hasUserResponse;
+                currentTopic.readPending = previousTopicFound.readPending;
 
-            if (isDiff) {
-                updatedTopics.push(topic);
+                if (previousTopicFound.isNew) {
+                    // Au premier chargement, le topic est nouveau.
+                    // Si l'utilisateur recharge la page, une seconde fois, le topic n'est plus nouveau, mais juste non lu.
+                    currentTopic.readPending = true;
+                }
+
+                updatedTopics.push(currentTopic);
             }
         }
     }
 
     // Trouver des nouveaux topics, ou des vieux topics qui remontent
-
     let previousTopicsId = previousTopics.map(topic => topic.id);
     let currentTopicsId = currentTopics.map(topic => topic.id);
 
@@ -80,7 +97,7 @@ function searchChanges(previousTopics: Topic[], currentTopics: Topic[]): Snapsho
     let newTopics: Topic[] = [];
     for (let id of newTopicsId) {
         let newTopic = currentTopics.find(t => t.id === id);
-        newTopic.isReadPending();
+        newTopic.isNew = true;
         newTopics.push(newTopic);
         // Global update
         updatedTopics.push(newTopic);
@@ -112,29 +129,44 @@ function extractTopicsFromHTML(): TopicsAndElements {
     return { topics: topics, elements: topicsElements };
 }
 
-
-
 /**
  * Update visuellement les topics qui ont été mis à jour par rapport à la dernière visite
  * Les liens deviennnent bleus pour indiquer le nouveau contenu non lu
  * @param {HTMLCollection} topicElements - Les éléments des topics de la page courante
  * @param {Topic[]} updatedTopics - Les topics qui ont du nouveau contenu, et qu'il faut mettre en surbrillance
  */
-function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
+function colorizeItems(topicElements: HTMLCollectionOf<HTMLLIElement>, updatedTopics: Topic[]): HTMLLIElement[] {
 
     let elements: HTMLLIElement[] = [];
-    for (let topic of updatedTopics) {
-        for (let el of topicElements) {
-            if (el.dataset.id === topic.id) {
-                el.innerHTML = topic.innerHTML;
-                el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#006bd7';
-                // Save element reference to watch it
-                elements.push(el);
+
+    const collection = [...topicElements];
+    collection.shift(); // Suppression du titre du tableau
+
+    for (let el of collection) {
+        // Vérifie si l'élément est dans les updates
+        const updatedTopic = updatedTopics.find((t: Topic) => t.id === el.dataset.id);
+
+        if (updatedTopic) {
+            // On le sauvegarde pour ajouter un listener
+            elements.push(el);
+            // On applique la couleur qu'il faut
+            if (updatedTopic.isNew) {
+                applyColorToElement(el, TopicState.NEW);
+            } else if (updatedTopic.readPending || !updatedTopic.hasUserResponse) {
+                applyColorToElement(el, TopicState.UNREAD);
+            } else {
+                applyColorToElement(el, TopicState.FOCUS);
             }
+        } else {
+            applyColorToElement(el, TopicState.READ);
         }
     }
 
     return elements;
+}
+
+function applyColorToElement(element: HTMLLIElement, state: TopicState): void {
+    element.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = state;
 }
 
 /**
@@ -142,21 +174,25 @@ function injectUpdatedElement(topicElements: HTMLCollectionOf<HTMLLIElement>, up
  * @param {string} forumId 
  * @param {HTMLElement} elements 
  */
-async function watchUnreadTopics(forumId, elements) {
+async function watchUnreadTopics(forumId: string, elements: HTMLLIElement[]) {
 
     for (let i = 0; i < elements.length; i++) {
         (function (index) {
-            let el = elements[index];
-            el.addEventListener('click', async function () {
+            let el = elements[index] as HTMLLIElement;
+            el.addEventListener('click', function () {
                 el.getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
                 // Update snapshot
-                let snapshot = await getLastSnapshot(forumInfos.id);
-                let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
-                // Create new topic object with current topic element informations
-                let updatedTopic = Topic.fromHTML(el);
-                snapshot[forumId].topics[idx] = updatedTopic;
-                // Synchronize updated snapshot to local storage
-                forumSnapshot(forumId, snapshot[forumId].topics);
+                getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+                    let idx = snapshot[forumId].topics.findIndex(t => t.id === el.dataset.id);
+                    // Create new topic object with current topic element informations
+                    if (idx !== -1) {
+                        let updatedTopic = Topic.fromHTML(el);
+                        snapshot[forumId].topics[idx].count = updatedTopic.count;
+                        snapshot[forumId].topics[idx].readPending = false;
+                        // Synchronize updated snapshot to local storage
+                        forumSnapshot(forumId, snapshot[forumId].topics);
+                    }
+                }).catch((error) => cnsl('Error on watchUnreadTopics', error));
             }, false);
         })(i)
     }
@@ -190,17 +226,33 @@ async function updateSnapshot(forumId: string, snapshot: Snapshot, snapshotChang
     return snapshot;
 }
 
-async function addFollowButton(): Promise<void> {
-    const isFollowed = await isFollowedForum();
-    const followBtn = createButton(isFollowed);
-    // Handle button clicks
-    addLiveButtonListener(followBtn);
+function addOptionsButtons() {
+    isFollowedForum().then((isFollowed: boolean) => {
+        // Récupération du bloc header
+        // /!\ Il y a 2 header-bloc
+        let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
+        // Création de l'espace des options
+        let forumOptions = document.createElement('div');
+        forumOptions.classList.add('forum-options');
+        // Create buttons
+        const followBtn = createFollowButton(isFollowed);
+        const readAllBtn = createReadAllButton();
+        // Insert buttons
+        forumOptions.appendChild(followBtn);
+        forumOptions.appendChild(readAllBtn);
+        // Add option container
+        forumHeaderBloc.after(forumOptions);
+
+        // Handle button clicks
+        addLiveButtonListener(followBtn);
+        addReadAllButtonListener(readAllBtn);
+    });
 }
 
 /** Si ce forum était dans les mises à jour trouvées, il faut le supprimer */
 function checkUpdateBackup(): void {
     getUpdates().then((updateBackup: UpdateBackup) => {
-        if (updateBackup.updates.length > 0) {
+        if (updateBackup.updates && updateBackup.updates.length > 0) {
             const idx = updateBackup.updates.map(u => u.forumUrl).findIndex(url => url === currentTab.url);
             cnsl('Index dans les update du forum', idx);
             if (idx >= 0) {
@@ -209,6 +261,15 @@ function checkUpdateBackup(): void {
                 updateBadgeCount(updateBackup.updates.length.toString());
             }
         }
+    });
+}
+
+/**
+ * Au chargement d'une page du forum, on vérifie si le job de synchronisation fonctionne toujours.
+ */
+function checkBackgroundNotifierStatus(): void {
+    chrome.runtime.sendMessage({ isBackgroundJobRunning: true }, (responseCallback) => {
+        cnsl(responseCallback);
     });
 }
 
@@ -234,31 +295,21 @@ async function isFollowedForum(): Promise<boolean> {
  * Création du bouton pour suivre un forum
  * @param {boolean} isForumFollowed - Etat du bouton en fonction du statut de suivi
  */
-function createButton(isForumFollowed: boolean): HTMLDivElement {
-    // Récupération du bloc header
-    // /!\ Il y a 2 header-bloc
-    let forumHeaderBloc = document.getElementsByClassName('titre-head-bloc')[0];
-    // Création de l'espace des options
-    let forumOptions = document.createElement('div');
-    forumOptions.classList.add('forum-options');
+function createFollowButton(isForumFollowed: boolean): HTMLDivElement {
     // Création du bouton follow
     let followBtn = document.createElement('div');
     followBtn.classList.add('follow-btn');
     // Button condition
     updateFollowButtonUI(followBtn, isForumFollowed);
-    // Insertion des options
-    forumOptions.appendChild(followBtn);
-    // Ajout de la vue
-    forumHeaderBloc.after(forumOptions);
 
     return followBtn;
 }
 
 function updateFollowButtonUI(followBtn: HTMLDivElement, isForumFollowed: boolean) {
     if (isForumFollowed) {
-        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivi</button></a>';
+        followBtn.innerHTML = '<a><button class="optionButton">Suivi</button></a>';
     } else {
-        followBtn.innerHTML = '<a><button class="btn btn-poster-msg datalayer-push js-post-topic">Suivre</button></a>';
+        followBtn.innerHTML = '<a><button class="optionButton">Suivre</button></a>';
     }
 }
 
@@ -281,7 +332,7 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
         if (!follows['followedForums']) {
             follows.followedForums = [];
         }
-
+        // Logique suivi / non suivi
         if (isFollowed) {
             const links = follows.followedForums.map((forum: Forum) => forum.rssUrl);
             let idx = links.findIndex((link: string) => link === rssLink);
@@ -299,5 +350,40 @@ function addLiveButtonListener(followBtn: HTMLDivElement): void {
             cnsl(response);
         })
     });
+}
+
+function addReadAllButtonListener(readAllBtn: HTMLDivElement): void {
+    readAllBtn.addEventListener('click', () => {
+        // Colorize all link to grey (like when user opened it)
+        for (var i = 1; i < currentTopicsInstance.elements.length; i++) {
+            currentTopicsInstance.elements[i].getElementsByTagName('span')[0].getElementsByTagName('a')[0].style.color = '#777';
+        }
+        // Update Snapshot count of each
+        const forumId = forumInfos.id;
+        getLastSnapshot(forumInfos.id).then((snapshot: Snapshot) => {
+            for (let currentTopic of currentTopicsInstance.topics) {
+                const index = snapshot[forumId].topics.findIndex(t => t.id === currentTopic.id);
+                if (index !== -1) {
+                    snapshot[forumId].topics[index].count = currentTopic.count;
+                    snapshot[forumId].topics[index].readPending = false;
+                    snapshot[forumId].topics[index].isNew = false;
+                }
+            }
+            // Update Snapshot
+            forumSnapshot(forumId, snapshot[forumId].topics);
+        });
+    })
+}
+
+/**
+ * Bouton permettant de lire tous les topics en une fois
+ */
+function createReadAllButton(): HTMLDivElement {
+    // Création du bouton follow
+    let readAllBtn = document.createElement('div');
+    readAllBtn.classList.add('read-all');
+    readAllBtn.innerHTML = '<a><button class="optionButton">Tout lire</button></a>';
+
+    return readAllBtn;
 }
 

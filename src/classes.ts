@@ -40,7 +40,7 @@ export class Forum {
     rssUrl: string;
     /**
      * Informations pour l'affichage d'un forum suivi dans les options globales 
-     * @param {string} name - Titre du forum // TODO => faire une regex
+     * @param {string} name - Titre du forum
      * @param {string} url - URL du forum
      * @param {string} rssUrl - URL du flux RSS
      */
@@ -71,7 +71,7 @@ export class Forum {
      * Création d'un objet Forum
      * @param {Object} obj 
      */
-    static fromObject(obj): Forum { // TODO => plus besoin avec les types
+    static fromObject(obj): Forum {
         return new Forum(obj.name, obj.url, obj.rssUrl);
     }
 }
@@ -86,12 +86,13 @@ export class Topic {
     author: string;
     count: string;
     date: string;
-    innerHTML: string;
     readPending: boolean;
     forumId: string;
     forumUrl: string;
     createdAt: number;
     forumTitle: string;
+    hasUserResponse: boolean;
+    isNew = false;
 
     constructor(
         id: string,
@@ -100,7 +101,6 @@ export class Topic {
         author: string,
         count: string,
         date: string,
-        innerHTML: string,
         forumId: string,
         forumUrl: string,
         forumTitle: string
@@ -111,12 +111,12 @@ export class Topic {
         this.author = author;
         this.count = count;
         this.date = date;
-        this.innerHTML = innerHTML;
         this.readPending = false;
         this.forumId = forumId;
         this.forumUrl = forumUrl;
         this.createdAt = Date.now();
         this.forumTitle = forumTitle;
+        this.hasUserResponse = false;
     }
 
     /**
@@ -135,12 +135,11 @@ export class Topic {
         let author = element.children[1].innerText;
         let count = element.children[2].innerText;
         let date = element.children[3].innerText;
-        let innerHTML = element.innerHTML.trim();
         let forumId = urlMatchs[1];
         let forumUrl = ''
         let forumTitle = '';
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
+        return new Topic(id, url, subject, author, count, date, forumId, forumUrl, forumTitle);
     }
 
     /**
@@ -163,10 +162,9 @@ export class Topic {
         let author = (globalInfos.match(authorRegex) || []).map(e => e.replace(authorRegex, '$1'))[0].trim();
         let count = (globalInfos.match(countRegex) || []).map(e => e.replace(countRegex, '$1'))[0].trim();
         let date = '';
-        let innerHTML = '';
         let forumId = (fullURL.match(forumIdRegex) || []).map(e => e.replace(forumIdRegex, '$1'))[0].trim();
 
-        return new Topic(id, url, subject, author, count, date, innerHTML, forumId, forumUrl, forumTitle);
+        return new Topic(id, url, subject, author, count, date, forumId, forumUrl, forumTitle);
     }
 
     /**
@@ -263,4 +261,11 @@ export interface Config {
 
 export interface TopicConfig {
     previsu: boolean;
+}
+
+export enum TopicState {
+    UNREAD = '#006bd7',
+    FOCUS = '#ff572e',
+    READ = '#777',
+    NEW = '#4CC450'
 }

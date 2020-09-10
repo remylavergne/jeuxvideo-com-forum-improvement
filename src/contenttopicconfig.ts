@@ -12,7 +12,7 @@ let alreadyPost = false;
 // Script qui se lance à tout les lancements de page / onglet / tab.
 chrome.runtime.sendMessage({ contentScripts: "topic-config" });
 
-chrome.runtime.onMessage.addListener(async function (request, sender, sendResponse) {
+chrome.runtime.onMessage.addListener(async function (request, _sender, _sendResponse) {
     if (request.contentTopicConfig) {
         const forum = getForumInformations(request.contentTopicConfig.url);
         if (!forum.isTopForum) {
@@ -37,7 +37,7 @@ enum ConfigDiffs {
 }
 
 async function findTopicConfigDiffs(config: GlobalConfiguration): Promise<ConfigDiffs[]> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve, _reject) => {
         const topicConfig = config.globalConfig.topic;
         const defaultTopicConfig = defaultConfig.globalConfig.topic;
 
@@ -75,11 +75,12 @@ function listenReplyButton(forumInfos: ForumInfos): void {
     const textArea = document.getElementById('message_topic') as HTMLTextAreaElement;
     const replyButton = document.getElementsByClassName('btn btn-poster-msg datalayer-push js-post-message')[0];
 
-    replyButton.addEventListener('click', (event) => {
-        if (textArea.value && !alreadyPost) {
-            alreadyPost = true;
-            chrome.runtime.sendMessage({ userReplyTo: forumInfos });
-        }
-    })
-
+    if (replyButton) {
+        replyButton.addEventListener('click', (_event) => {
+            if (textArea.value && !alreadyPost) {
+                alreadyPost = true;
+                chrome.runtime.sendMessage({ userReplyTo: forumInfos });
+            }
+        })
+    }
 }
