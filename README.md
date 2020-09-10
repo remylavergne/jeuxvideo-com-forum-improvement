@@ -5,12 +5,19 @@
 🚀 Mais quelles fonctionnalités propose-t'elle ?
 
 ➕ La gestion du statut des messages est enfin correcte. Si un message est actualisé pendant votre absence, ce dernier sera remis en bleu (statut non lu) à la prochaine visite.
+
 ➕ Vous pouvez vous abonner aux forums de votre choix. Cela veut dire que même si vous ne naviguez pas sur le forum, l'extension va se charger d'aller vérifier si ces forums ont du nouveau contenu.
+
 Si oui, le badge de notification de l'extension en affichera le nombre exact.
+
 ➕ Si du nouveau contenu est disponible, la fenêtre principale de l'extension vous affiche un lien avec le nombre de message, mais aussi les nouveaux disponibles.
+
 ➕Un panneau d'option vous permet de gérer tous vos abonnements. Si vous ne voulez plus suivre un forum, cela se fait en un seul clic.
+
 ➕Les sujets auxquels nous avons répondu seront dans une autre couleur si de nouveaux messages arrivent (pour un meilleur suivi).
+
 ➕Il est possible de lire tous les messages d'un forum en un seul clic via le bouton **TOUT LIRE**.
+
 
 ## 🌎 Installation depuis le Chrome Store
 
@@ -69,3 +76,7 @@ Si c'est le cas, le nombre de forums à jour s'affiche sur le badge l'icône de 
 - Page d'administration des suivis ✅
 - Amélioration de la vérification des mises à jour des forums suivis ✅
 - Si un onglet est déjà ouvert, et qu'il correspond au bon forum, le ré-utiliser.
+- Mettre les topics où l'utilisateur a participé dans une autre couleur -> Modifiable dans la configuration
+- Un bouton tout marquer lu
+- Mettre les topics clos en lu -> Dans les options
+- Possibilité de ne pas suivre des topics (jugés inintéressants)
