@@ -68,7 +68,7 @@ function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): Sna
         let previousTopicFound = previousTopics.find((t: Topic) => t.id === currentTopic.id);
 
         if (previousTopicFound) {
-            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.readPending;
+            const isUpdated = (previousTopicFound.count !== currentTopic.count) || previousTopicFound.readPending || previousTopicFound.isNew;
 
             if (isUpdated) {
                 // Copy params from previous topic
@@ -79,6 +79,7 @@ function findUpdatedTopics(previousTopics: Topic[], currentTopics: Topic[]): Sna
                     // Au premier chargement, le topic est nouveau.
                     // Si l'utilisateur recharge la page, une seconde fois, le topic n'est plus nouveau, mais juste non lu.
                     currentTopic.readPending = true;
+                    currentTopic.isNew = false;
                 }
 
                 updatedTopics.push(currentTopic);
@@ -189,6 +190,7 @@ async function watchUnreadTopics(forumId: string, elements: HTMLLIElement[]) {
                         let updatedTopic = Topic.fromHTML(el);
                         snapshot[forumId].topics[idx].count = updatedTopic.count;
                         snapshot[forumId].topics[idx].readPending = false;
+                        snapshot[forumId].topics[idx].isNew = false;
                         // Synchronize updated snapshot to local storage
                         forumSnapshot(forumId, snapshot[forumId].topics);
                     }
