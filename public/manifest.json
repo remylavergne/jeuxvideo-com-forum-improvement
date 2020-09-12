@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "JV Live",
-    "version": "1.10.7",
+    "version": "1.10.8",
     "description": "Extension pour améliorer le suivi des forums de jeuxvideo.com.",
     "author": "Rémy Lavergne",
     "icons": {
