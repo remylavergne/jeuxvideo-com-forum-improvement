@@ -17,10 +17,16 @@ export function getForumInformations(forumUrl: string): ForumInfos {
     } else {
         // Topic
         const topicRegex = new RegExp(/forums\/\d+-\d+-\d+-/g);
-        const matchs =forumUrl.match(topicRegex)[0].split('-');
-        const forumId = matchs[1];
-        const topicId = matchs[2];
-        return { id: forumId, isTopForum: false, url: forumUrl, topicId: topicId };
+        const matchs = forumUrl.match(topicRegex);
+
+        if (matchs && matchs[0]) {
+            const split = matchs[0].split('-');
+            const forumId = split[1];
+            const topicId = split[2];
+            return { id: forumId, isTopForum: false, url: forumUrl, topicId: topicId };
+        } else {
+            return { id: null, isTopForum: false, url: forumUrl, topicId: null };
+        }
     }
 }
 
@@ -30,17 +36,17 @@ export function getForumInformations(forumUrl: string): ForumInfos {
 * @param {Topic[]} currentTopics - Liste des topics en objet custom
 */
 export function forumSnapshot(forumId: string, topics: Topic[]): void {
-   // Create a Snapshot
-   const snapshot: Snapshot = {
-       [forumId]: {
-           createdTime: Date.now(),
-           topics: topics
-       }
-   };
-   // Save it
-   chrome.storage.local.set(snapshot, () => {
-       cnsl('Snapshot sauvegardé', snapshot);
-   })
+    // Create a Snapshot
+    const snapshot: Snapshot = {
+        [forumId]: {
+            createdTime: Date.now(),
+            topics: topics
+        }
+    };
+    // Save it
+    chrome.storage.local.set(snapshot, () => {
+        cnsl('Snapshot sauvegardé', snapshot);
+    })
 }
 
 /**
@@ -145,10 +151,10 @@ export function getCurrentDateAndTime(): string {
 
 function formatTwoChar(i): string {
     if (i < 10) {
-      i = "0" + i;
+        i = "0" + i;
     }
     return i;
-  }
+}
 
 /**
  * Affichage des logs en debug
