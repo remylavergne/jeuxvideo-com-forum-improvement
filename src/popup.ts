@@ -16,13 +16,13 @@ window.onload = async function () {
 }
 
 const list = document.getElementsByClassName('forum-urls')[0];
-const noUpdate = document.getElementById('no-update');
+const noUpdate = document.getElementById('no-update') as HTMLDivElement;
 const date = document.getElementById('footer-date');
 
 function updateForumsList(backup: UpdateBackup): void {
 
     if (backup.updates.length > 0) {
-        noUpdate.hidden = true;
+        noUpdate.style.display = 'none';
 
         for (let update of backup.updates) {
             const li = document.createElement('li');
